@@ -1,0 +1,14 @@
+generated: '2026-07-19'
+method: derived
+source: openapi/flexai-token-factory-openapi.yml
+summary:
+  types:
+  - http
+schemes:
+- name: bearerAuth
+  type: http
+  scheme: bearer
+  description: 'FlexAI API key passed as a bearer token: `Authorization: Bearer $FLEXAI_API_KEY`.
+    Create a key at https://tokens.flex.ai/signup.'
+  sources:
+  - openapi/flexai-token-factory-openapi.yml
