@@ -1,0 +1,201 @@
+openapi: 3.0.3
+info:
+  title: FlexAI Token Factory Audio Chat API
+  version: v1
+  description: 'OpenAI-compatible inference API for FlexAI Token Factory. A single API key provides access to open models across text, code, reasoning, vision, embedding, image, video, and audio modalities, priced by usage per model. The API is a drop-in replacement for the OpenAI API: point the OpenAI SDK (or any OpenAI-compatible client) at the FlexAI base URL and supply a FlexAI API key. This specification captures the endpoints FlexAI documents as supported; some OpenAI endpoints (assistants, threads, runs, files, fine-tuning, batches) are explicitly not served by this endpoint.'
+  contact:
+    name: FlexAI
+    url: https://docs.flex.ai
+  termsOfService: https://flex.ai/terms-of-service
+  x-provenance:
+    generated: '2026-07-19'
+    method: generated
+    source: https://docs.flex.ai/inference-api/reference/openai-compatibility and https://flex.ai/llms.txt — generated from FlexAI's documented OpenAI-compatible endpoint surface. Not a provider-published OpenAPI file.
+servers:
+- url: https://tokens.flex.ai/v1
+  description: FlexAI Token Factory (serverless inference)
+security:
+- bearerAuth: []
+tags:
+- name: Chat
+  description: Chat completions
+paths:
+  /chat/completions:
+    post:
+      operationId: createChatCompletion
+      summary: Create a chat completion
+      description: 'Generate a model response for a chat conversation. OpenAI-compatible. Supports streaming via server-sent events when stream=true. Note: non-streaming responses are capped at 2048 output tokens regardless of max_tokens (finish_reason "length"); n > 1 is rejected with a 400.'
+      tags:
+      - Chat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatCompletionRequest'
+      responses:
+        '200':
+          description: A chat completion (or an SSE stream when stream=true)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatCompletion'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+components:
+  schemas:
+    ChatCompletion:
+      type: object
+      properties:
+        id:
+          type: string
+        object:
+          type: string
+          example: chat.completion
+        created:
+          type: integer
+        model:
+          type: string
+        choices:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: integer
+              message:
+                $ref: '#/components/schemas/ChatMessage'
+              finish_reason:
+                type: string
+                enum:
+                - stop
+                - length
+                - tool_calls
+                - content_filter
+        usage:
+          type: object
+          properties:
+            prompt_tokens:
+              type: integer
+            completion_tokens:
+              type: integer
+            total_tokens:
+              type: integer
+    ChatMessage:
+      type: object
+      required:
+      - role
+      - content
+      properties:
+        role:
+          type: string
+          enum:
+          - system
+          - user
+          - assistant
+          - tool
+        content:
+          type: string
+        name:
+          type: string
+    ChatCompletionRequest:
+      type: object
+      required:
+      - model
+      - messages
+      properties:
+        model:
+          type: string
+          description: Model id from the /models catalog.
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatMessage'
+        temperature:
+          type: number
+        top_p:
+          type: number
+        stop:
+          oneOf:
+          - type: string
+          - type: array
+            items:
+              type: string
+        seed:
+          type: integer
+        user:
+          type: string
+        max_tokens:
+          type: integer
+          description: Non-streaming responses are capped at 2048 output tokens regardless of this value.
+        stream:
+          type: boolean
+        stream_options:
+          type: object
+          properties:
+            include_usage:
+              type: boolean
+        tools:
+          type: array
+          items:
+            type: object
+        tool_choice:
+          oneOf:
+          - type: string
+          - type: object
+        response_format:
+          type: object
+        presence_penalty:
+          type: number
+        frequency_penalty:
+          type: number
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            type:
+              type: string
+            param:
+              type: string
+              nullable: true
+            code:
+              type: string
+            doc_url:
+              type: string
+  responses:
+    Unauthorized:
+      description: Invalid or missing API key (error code `authentication_error`; includes a `doc_url` extension pointing at the auth docs).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TooManyRequests:
+      description: Account-level rate limit or budget exceeded. Includes `Retry-After` and `x-ratelimit-*` response headers.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    BadRequest:
+      description: Request validation failure. The error object includes a `param` field indicating the offending path (OpenAI-compatible error envelope).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: 'FlexAI API key passed as a bearer token: `Authorization: Bearer $FLEXAI_API_KEY`. Create a key at https://tokens.flex.ai/signup.'

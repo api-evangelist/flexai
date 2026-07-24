@@ -1,0 +1,91 @@
+openapi: 3.0.3
+info:
+  title: FlexAI Token Factory Audio Models API
+  version: v1
+  description: 'OpenAI-compatible inference API for FlexAI Token Factory. A single API key provides access to open models across text, code, reasoning, vision, embedding, image, video, and audio modalities, priced by usage per model. The API is a drop-in replacement for the OpenAI API: point the OpenAI SDK (or any OpenAI-compatible client) at the FlexAI base URL and supply a FlexAI API key. This specification captures the endpoints FlexAI documents as supported; some OpenAI endpoints (assistants, threads, runs, files, fine-tuning, batches) are explicitly not served by this endpoint.'
+  contact:
+    name: FlexAI
+    url: https://docs.flex.ai
+  termsOfService: https://flex.ai/terms-of-service
+  x-provenance:
+    generated: '2026-07-19'
+    method: generated
+    source: https://docs.flex.ai/inference-api/reference/openai-compatibility and https://flex.ai/llms.txt — generated from FlexAI's documented OpenAI-compatible endpoint surface. Not a provider-published OpenAPI file.
+servers:
+- url: https://tokens.flex.ai/v1
+  description: FlexAI Token Factory (serverless inference)
+security:
+- bearerAuth: []
+tags:
+- name: Models
+  description: Model catalog
+paths:
+  /models:
+    get:
+      operationId: listModels
+      summary: List available models
+      description: Return the live catalog of models served by FlexAI across all modalities, with category annotations (text, code, reasoning, vision, embedding, image, video, audio).
+      tags:
+      - Models
+      responses:
+        '200':
+          description: The list of available models
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+components:
+  schemas:
+    Model:
+      type: object
+      properties:
+        id:
+          type: string
+        object:
+          type: string
+          example: model
+        created:
+          type: integer
+        owned_by:
+          type: string
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            type:
+              type: string
+            param:
+              type: string
+              nullable: true
+            code:
+              type: string
+            doc_url:
+              type: string
+    ModelList:
+      type: object
+      properties:
+        object:
+          type: string
+          example: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Model'
+  responses:
+    Unauthorized:
+      description: Invalid or missing API key (error code `authentication_error`; includes a `doc_url` extension pointing at the auth docs).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: 'FlexAI API key passed as a bearer token: `Authorization: Bearer $FLEXAI_API_KEY`. Create a key at https://tokens.flex.ai/signup.'
