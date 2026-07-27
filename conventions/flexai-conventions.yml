@@ -1,0 +1,84 @@
+generated: '2026-07-19'
+method: searched
+source: >-
+  https://docs.flex.ai/inference-api/reference/openai-compatibility and
+  https://docs.flex.ai/inference-api/reference/billing — cross-cutting
+  request/response conventions of the FlexAI Token Factory OpenAI-compatible API.
+description: >-
+  How the FlexAI Token Factory API behaves across every operation:
+  authentication, error envelope, rate-limit signaling, versioning, and
+  streaming. FlexAI is a drop-in OpenAI-compatible API, so its conventions
+  mirror the OpenAI API; FlexAI does not currently document an idempotency-key
+  header.
+
+base_url: https://tokens.flex.ai/v1
+api_style: REST over HTTPS, JSON request/response, OpenAI-compatible
+
+authentication:
+  scheme: Bearer token (API key)
+  header: 'Authorization: Bearer $FLEXAI_API_KEY'
+  key_management: https://tokens.flex.ai/signup
+  oauth: false
+  detail: authentication/flexai-authentication.yml
+  docs: https://docs.flex.ai/inference-api/reference/openai-compatibility
+
+idempotency:
+  supported: false
+  note: >-
+    FlexAI does not document an Idempotency-Key header. The API is
+    OpenAI-compatible; a `seed` parameter is accepted on chat/completions for
+    reproducible sampling but is not an idempotency mechanism. Retries are the
+    client's responsibility.
+
+pagination:
+  supported: false
+  note: >-
+    The catalog endpoint (GET /v1/models) returns the full list in one
+    response; no cursor/offset pagination is documented.
+
+streaming:
+  supported: true
+  mechanism: 'Server-sent events when `stream: true` on chat/completions'
+  usage: 'Set `stream_options.include_usage: true` to receive a final usage chunk.'
+  note: >-
+    Streaming responses are billed for all generated tokens even if the
+    connection closes early.
+
+versioning:
+  scheme: uri-path
+  current: v1
+  note: The version is pinned in the base URL path (/v1); no version header.
+  detail: lifecycle/flexai-lifecycle.yml
+
+error_envelope:
+  media_type: application/json
+  rfc9457: false
+  shape: '{ "error": { "message", "type", "param", "code", "doc_url" } }'
+  note: >-
+    OpenAI-compatible error object. `param` names the offending request field on
+    validation errors; `authentication_error` responses include a `doc_url`
+    extension.
+  detail: errors/flexai-problem-types.yml
+  docs: https://docs.flex.ai/inference-api/reference/openai-compatibility
+
+rate_limits:
+  signal_status: 429
+  budget_status: 402
+  headers:
+    - x-ratelimit-limit-requests
+    - x-ratelimit-remaining-requests
+    - x-ratelimit-reset-requests
+    - Retry-After
+  detail: rate-limits/flexai-rate-limits.yml
+  docs: https://docs.flex.ai/inference-api/reference/billing
+
+output_limits:
+  max_output_tokens_non_streaming: 2048
+  note: >-
+    Non-streaming chat/completions responses are capped at 2048 output tokens
+    regardless of max_tokens (finish_reason "length"). `n` > 1 is rejected with
+    a 400.
+
+webhooks:
+  supported: false
+  note: No webhook or event-delivery surface is documented.

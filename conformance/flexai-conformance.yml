@@ -1,0 +1,33 @@
+generated: '2026-07-19'
+method: derived
+source: >-
+  openapi/flexai-token-factory-openapi.yml and
+  https://docs.flex.ai/inference-api/reference/openai-compatibility
+description: >-
+  Cross-cutting standards conformance for the FlexAI Token Factory API, derived
+  from its OpenAPI surface and documented behavior. FlexAI's headline
+  conformance claim is drop-in compatibility with the OpenAI API.
+standards:
+  - id: openai-compatible-api
+    conforms: true
+    evidence: >-
+      Documented drop-in OpenAI compatibility across /v1/chat/completions,
+      /v1/completions, /v1/models, /v1/embeddings, /v1/audio/*, /v1/images and
+      /v1/videos generation; standard OpenAI error object and x-ratelimit-*
+      headers.
+  - id: http-bearer-auth
+    conforms: true
+    evidence: openapi securityScheme type http scheme bearer
+  - id: oauth2
+    conforms: false
+  - id: openid-connect
+    conforms: false
+  - id: rfc9457-problem-details
+    conforms: false
+    evidence: Errors use the OpenAI error object, not application/problem+json.
+  - id: rfc9116-security-txt
+    conforms: false
+    evidence: No /.well-known/security.txt served (host returns SPA soft-200).
+  - id: server-sent-events-streaming
+    conforms: true
+    evidence: chat/completions supports stream=true with SSE and usage chunks.

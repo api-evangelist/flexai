@@ -1,0 +1,32 @@
+overlay: 1.0.0
+info:
+  title: API Evangelist enhancements for FlexAI Token Factory
+  version: 1.0.0
+extends: openapi/flexai-token-factory-openapi.yml
+x-provenance:
+  generated: '2026-07-19'
+  method: generated
+  source: API Evangelist enrichment pipeline
+actions:
+  - target: $.info
+    update:
+      x-apievangelist-rating: 3
+      x-openai-compatible: true
+      x-artifacts:
+        authentication: authentication/flexai-authentication.yml
+        conventions: conventions/flexai-conventions.yml
+        errors: errors/flexai-problem-types.yml
+        rate_limits: rate-limits/flexai-rate-limits.yml
+        lifecycle: lifecycle/flexai-lifecycle.yml
+        conformance: conformance/flexai-conformance.yml
+        data_model: data-model/flexai-data-model.yml
+  - target: $.paths['/chat/completions'].post
+    update:
+      x-rate-limit-headers:
+        - x-ratelimit-limit-requests
+        - x-ratelimit-remaining-requests
+        - x-ratelimit-reset-requests
+      x-output-cap-non-streaming: 2048
+  - target: $.paths['/models'].get
+    update:
+      x-catalog: https://flex.ai/models

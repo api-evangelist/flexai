@@ -1,0 +1,26 @@
+{
+  "provider": "flexai",
+  "sources": [
+    "flexai-audio-api-openapi.yml",
+    "flexai-chat-api-openapi.yml",
+    "flexai-completions-api-openapi.yml",
+    "flexai-embeddings-api-openapi.yml",
+    "flexai-images-api-openapi.yml",
+    "flexai-models-api-openapi.yml",
+    "flexai-video-api-openapi.yml"
+  ],
+  "outputs": [
+    "flexai-audio-api-openapi.yml",
+    "flexai-chat-api-openapi.yml",
+    "flexai-completions-api-openapi.yml",
+    "flexai-embeddings-api-openapi.yml",
+    "flexai-images-api-openapi.yml",
+    "flexai-models-api-openapi.yml",
+    "flexai-video-api-openapi.yml"
+  ],
+  "archived": [],
+  "errors": [],
+  "warnings": [],
+  "notes": [],
+  "skipped": []
+}

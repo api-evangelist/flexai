@@ -1,0 +1,39 @@
+generated: '2026-07-19'
+method: derived
+status: candidate
+source: openapi/flexai-token-factory-openapi.yml
+description: >-
+  Candidate MCP tool surface derived from the FlexAI Token Factory OpenAPI
+  operations. FlexAI does not publish an official hosted MCP server; this is a
+  starting point that maps each documented operation to one MCP tool. Because
+  the API is OpenAI-compatible, most agent frameworks call it directly as a
+  model provider rather than via MCP.
+server:
+  name: flexai-token-factory
+  transport: http
+  url: null
+tools:
+  - name: create_chat_completion
+    description: Generate a chat completion from a list of messages.
+    source_operation: openapi/flexai-token-factory-openapi.yml#createChatCompletion
+  - name: create_completion
+    description: Generate a legacy text completion from a prompt.
+    source_operation: openapi/flexai-token-factory-openapi.yml#createCompletion
+  - name: list_models
+    description: List the available models in the live catalog.
+    source_operation: openapi/flexai-token-factory-openapi.yml#listModels
+  - name: create_embedding
+    description: Generate vector embeddings for text input.
+    source_operation: openapi/flexai-token-factory-openapi.yml#createEmbedding
+  - name: create_transcription
+    description: Transcribe audio to text (speech-to-text).
+    source_operation: openapi/flexai-token-factory-openapi.yml#createTranscription
+  - name: create_speech
+    description: Synthesize speech from text (text-to-speech).
+    source_operation: openapi/flexai-token-factory-openapi.yml#createSpeech
+  - name: create_image
+    description: Generate images from a text prompt.
+    source_operation: openapi/flexai-token-factory-openapi.yml#createImage
+  - name: create_video
+    description: Generate video from a text prompt (async).
+    source_operation: openapi/flexai-token-factory-openapi.yml#createVideo

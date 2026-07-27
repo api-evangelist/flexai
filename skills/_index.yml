@@ -1,0 +1,12 @@
+generated: '2026-07-19'
+method: generated
+source: openapi/flexai-token-factory-openapi.yml
+skills:
+  - file: flexai-chat-completion.md
+    name: Call an open model with the FlexAI chat completions API
+    api: openapi/flexai-token-factory-openapi.yml
+    operations: [listModels, createChatCompletion]
+  - file: flexai-embeddings.md
+    name: Generate embeddings with FlexAI
+    api: openapi/flexai-token-factory-openapi.yml
+    operations: [listModels, createEmbedding]

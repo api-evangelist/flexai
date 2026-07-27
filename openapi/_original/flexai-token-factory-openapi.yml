@@ -1,0 +1,463 @@
+openapi: 3.0.3
+info:
+  title: FlexAI Token Factory API
+  version: v1
+  description: >-
+    OpenAI-compatible inference API for FlexAI Token Factory. A single API key
+    provides access to open models across text, code, reasoning, vision,
+    embedding, image, video, and audio modalities, priced by usage per model.
+    The API is a drop-in replacement for the OpenAI API: point the OpenAI SDK
+    (or any OpenAI-compatible client) at the FlexAI base URL and supply a FlexAI
+    API key. This specification captures the endpoints FlexAI documents as
+    supported; some OpenAI endpoints (assistants, threads, runs, files,
+    fine-tuning, batches) are explicitly not served by this endpoint.
+  contact:
+    name: FlexAI
+    url: https://docs.flex.ai
+  termsOfService: https://flex.ai/terms-of-service
+  x-provenance:
+    generated: '2026-07-19'
+    method: generated
+    source: >-
+      https://docs.flex.ai/inference-api/reference/openai-compatibility and
+      https://flex.ai/llms.txt — generated from FlexAI's documented
+      OpenAI-compatible endpoint surface. Not a provider-published OpenAPI file.
+servers:
+  - url: https://tokens.flex.ai/v1
+    description: FlexAI Token Factory (serverless inference)
+security:
+  - bearerAuth: []
+tags:
+  - name: Chat
+    description: Chat completions
+  - name: Completions
+    description: Legacy text completions
+  - name: Models
+    description: Model catalog
+  - name: Embeddings
+    description: Vector embeddings
+  - name: Audio
+    description: Speech-to-text and text-to-speech
+  - name: Images
+    description: Image generation
+  - name: Video
+    description: Video generation
+paths:
+  /chat/completions:
+    post:
+      operationId: createChatCompletion
+      summary: Create a chat completion
+      description: >-
+        Generate a model response for a chat conversation. OpenAI-compatible.
+        Supports streaming via server-sent events when stream=true. Note:
+        non-streaming responses are capped at 2048 output tokens regardless of
+        max_tokens (finish_reason "length"); n > 1 is rejected with a 400.
+      tags: [Chat]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatCompletionRequest'
+      responses:
+        '200':
+          description: A chat completion (or an SSE stream when stream=true)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatCompletion'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /completions:
+    post:
+      operationId: createCompletion
+      summary: Create a text completion (legacy)
+      description: >-
+        Legacy text-completion endpoint kept for OpenAI compatibility. Prefer
+        /chat/completions for new work.
+      tags: [Completions]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [model, prompt]
+              properties:
+                model:
+                  type: string
+                prompt:
+                  type: string
+                max_tokens:
+                  type: integer
+                temperature:
+                  type: number
+                stream:
+                  type: boolean
+      responses:
+        '200':
+          description: A text completion
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /models:
+    get:
+      operationId: listModels
+      summary: List available models
+      description: >-
+        Return the live catalog of models served by FlexAI across all
+        modalities, with category annotations (text, code, reasoning, vision,
+        embedding, image, video, audio).
+      tags: [Models]
+      responses:
+        '200':
+          description: The list of available models
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /embeddings:
+    post:
+      operationId: createEmbedding
+      summary: Create embeddings
+      description: >-
+        Generate vector embeddings for the given input using an open embedding
+        model. Billed per token.
+      tags: [Embeddings]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [model, input]
+              properties:
+                model:
+                  type: string
+                input:
+                  description: A string or array of strings to embed.
+                  oneOf:
+                    - type: string
+                    - type: array
+                      items:
+                        type: string
+                encoding_format:
+                  type: string
+                  enum: [float, base64]
+                  default: float
+      responses:
+        '200':
+          description: The embedding vectors
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /audio/transcriptions:
+    post:
+      operationId: createTranscription
+      summary: Transcribe audio to text (speech-to-text)
+      description: >-
+        Transcribe audio using an open transcription model (e.g. Whisper).
+        Billed per minute of audio.
+      tags: [Audio]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [model, file]
+              properties:
+                model:
+                  type: string
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: The transcription result
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /audio/speech:
+    post:
+      operationId: createSpeech
+      summary: Synthesize speech from text (text-to-speech)
+      description: >-
+        Generate audio from input text using an open TTS model (e.g. Kokoro).
+        Billed per character.
+      tags: [Audio]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [model, input]
+              properties:
+                model:
+                  type: string
+                input:
+                  type: string
+                voice:
+                  type: string
+      responses:
+        '200':
+          description: The synthesized audio stream
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /images/generations:
+    post:
+      operationId: createImage
+      summary: Generate images
+      description: >-
+        Generate one or more images from a text prompt using an open image
+        model (e.g. FLUX.1). Billed per image.
+      tags: [Images]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [model, prompt]
+              properties:
+                model:
+                  type: string
+                prompt:
+                  type: string
+                n:
+                  type: integer
+                size:
+                  type: string
+      responses:
+        '200':
+          description: The generated image(s)
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+  /videos/generations:
+    post:
+      operationId: createVideo
+      summary: Generate video (async)
+      description: >-
+        Generate video from a text prompt using an open text-to-video model
+        (Wan2.2). Asynchronous; available on demand on dedicated GPUs. Billed
+        per generated video.
+      tags: [Video]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [model, prompt]
+              properties:
+                model:
+                  type: string
+                prompt:
+                  type: string
+      responses:
+        '200':
+          description: The video generation job
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: >-
+        FlexAI API key passed as a bearer token:
+        `Authorization: Bearer $FLEXAI_API_KEY`. Create a key at
+        https://tokens.flex.ai/signup.
+  responses:
+    BadRequest:
+      description: >-
+        Request validation failure. The error object includes a `param` field
+        indicating the offending path (OpenAI-compatible error envelope).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: >-
+        Invalid or missing API key (error code `authentication_error`; includes
+        a `doc_url` extension pointing at the auth docs).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TooManyRequests:
+      description: >-
+        Account-level rate limit or budget exceeded. Includes `Retry-After` and
+        `x-ratelimit-*` response headers.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+  schemas:
+    ChatCompletionRequest:
+      type: object
+      required: [model, messages]
+      properties:
+        model:
+          type: string
+          description: Model id from the /models catalog.
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatMessage'
+        temperature:
+          type: number
+        top_p:
+          type: number
+        stop:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+        seed:
+          type: integer
+        user:
+          type: string
+        max_tokens:
+          type: integer
+          description: >-
+            Non-streaming responses are capped at 2048 output tokens regardless
+            of this value.
+        stream:
+          type: boolean
+        stream_options:
+          type: object
+          properties:
+            include_usage:
+              type: boolean
+        tools:
+          type: array
+          items:
+            type: object
+        tool_choice:
+          oneOf:
+            - type: string
+            - type: object
+        response_format:
+          type: object
+        presence_penalty:
+          type: number
+        frequency_penalty:
+          type: number
+    ChatMessage:
+      type: object
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          enum: [system, user, assistant, tool]
+        content:
+          type: string
+        name:
+          type: string
+    ChatCompletion:
+      type: object
+      properties:
+        id:
+          type: string
+        object:
+          type: string
+          example: chat.completion
+        created:
+          type: integer
+        model:
+          type: string
+        choices:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: integer
+              message:
+                $ref: '#/components/schemas/ChatMessage'
+              finish_reason:
+                type: string
+                enum: [stop, length, tool_calls, content_filter]
+        usage:
+          type: object
+          properties:
+            prompt_tokens:
+              type: integer
+            completion_tokens:
+              type: integer
+            total_tokens:
+              type: integer
+    ModelList:
+      type: object
+      properties:
+        object:
+          type: string
+          example: list
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Model'
+    Model:
+      type: object
+      properties:
+        id:
+          type: string
+        object:
+          type: string
+          example: model
+        created:
+          type: integer
+        owned_by:
+          type: string
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            type:
+              type: string
+            param:
+              type: string
+              nullable: true
+            code:
+              type: string
+            doc_url:
+              type: string

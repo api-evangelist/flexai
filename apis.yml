@@ -1,7 +1,30 @@
 aid: flexai
+accessModel:
+  pricing: enterprise
+  onboarding: self-serve
+  trial: false
+  try_now: false
+  public: false
+  label: Enterprise · Self-serve signup
+  confidence: high
+  source:
+  - plans
+  - authentication
+  generated: '2026-07-22'
+  method: derived
+image: https://kinlane-images.s3.amazonaws.com/shared/apis-json/icons/flexai.png
 name: FlexAI
-description: 'FlexAI is a company surfaced as a portfolio company of partech and added to the API Evangelist
-  network as a stub for enrichment. Sector: AI/ML. This profile is a lead awaiting the enrichment pipeline.'
+description: >-
+  FlexAI is managed inference for builders — an OpenAI-compatible API (Token
+  Factory) that provides a single API key across open models for text, code,
+  reasoning, vision, embeddings, image, video, and audio, priced by usage per
+  model. Beyond serverless inference the platform offers dedicated GPU
+  endpoints, managed LoRA/QLoRA fine-tuning, distributed training, an Agent SDK
+  (in trial), and a private AI cloud (AI Factory) deployable to VPC, on-prem, or
+  air-gapped environments. Because the inference API is a drop-in OpenAI
+  replacement, teams point the OpenAI SDK at the FlexAI base URL and change only
+  the key. FlexAI is backed by Partech and profiled in the API Evangelist
+  network for its developer surface and agent-native infrastructure.
 url: https://raw.githubusercontent.com/api-evangelist/flexai/refs/heads/main/apis.yml
 x-type: company
 x-source: vc-portfolio
@@ -11,16 +34,211 @@ x-tier: stub
 x-tier-reason: portfolio-lead
 specificationVersion: '0.20'
 created: '2026-07-17'
-modified: '2026-07-17'
+modified: '2026-07-19'
 tags:
 - Company
 - Ai/Ml
-apis: []
+- Artificial Intelligence
+- Machine Learning
+- Inference
+- LLM
+- Large Language Models
+- OpenAI Compatible
+- GPU Compute
+- Embeddings
+- Fine-Tuning
+- Agents
 maintainers:
 - FN: Kin Lane
   email: kin@apievangelist.com
 - FN: APIs.json
   email: info@apis.io
+apis:
+- aid: flexai:flexai-audio-api
+  name: FlexAI Audio API
+  description: Speech-to-text and text-to-speech
+  humanURL: https://docs.flex.ai/inference-api/overview
+  baseURL: https://tokens.flex.ai/v1
+  tags:
+  - Audio
+  properties:
+  - type: OpenAPI
+    url: openapi/flexai-audio-api-openapi.yml
+  - type: Documentation
+    url: https://docs.flex.ai
+  - type: APIReference
+    url: https://docs.flex.ai/inference-api/reference/openai-compatibility
+  - type: GettingStarted
+    url: https://docs.flex.ai/inference-api/quickstart
+  - type: Authentication
+    url: authentication/flexai-authentication.yml
+- aid: flexai:flexai-chat-api
+  name: FlexAI Chat API
+  description: Chat completions
+  humanURL: https://docs.flex.ai/inference-api/overview
+  baseURL: https://tokens.flex.ai/v1
+  tags:
+  - Chat
+  properties:
+  - type: OpenAPI
+    url: openapi/flexai-chat-api-openapi.yml
+  - type: Documentation
+    url: https://docs.flex.ai
+  - type: APIReference
+    url: https://docs.flex.ai/inference-api/reference/openai-compatibility
+  - type: GettingStarted
+    url: https://docs.flex.ai/inference-api/quickstart
+  - type: Authentication
+    url: authentication/flexai-authentication.yml
+- aid: flexai:flexai-completions-api
+  name: FlexAI Completions API
+  description: Legacy text completions
+  humanURL: https://docs.flex.ai/inference-api/overview
+  baseURL: https://tokens.flex.ai/v1
+  tags:
+  - Completions
+  properties:
+  - type: OpenAPI
+    url: openapi/flexai-completions-api-openapi.yml
+  - type: Documentation
+    url: https://docs.flex.ai
+  - type: APIReference
+    url: https://docs.flex.ai/inference-api/reference/openai-compatibility
+  - type: GettingStarted
+    url: https://docs.flex.ai/inference-api/quickstart
+  - type: Authentication
+    url: authentication/flexai-authentication.yml
+- aid: flexai:flexai-embeddings-api
+  name: FlexAI Embeddings API
+  description: Vector embeddings
+  humanURL: https://docs.flex.ai/inference-api/overview
+  baseURL: https://tokens.flex.ai/v1
+  tags:
+  - Embeddings
+  properties:
+  - type: OpenAPI
+    url: openapi/flexai-embeddings-api-openapi.yml
+  - type: Documentation
+    url: https://docs.flex.ai
+  - type: APIReference
+    url: https://docs.flex.ai/inference-api/reference/openai-compatibility
+  - type: GettingStarted
+    url: https://docs.flex.ai/inference-api/quickstart
+  - type: Authentication
+    url: authentication/flexai-authentication.yml
+- aid: flexai:flexai-images-api
+  name: FlexAI Images API
+  description: Image generation
+  humanURL: https://docs.flex.ai/inference-api/overview
+  baseURL: https://tokens.flex.ai/v1
+  tags:
+  - Images
+  properties:
+  - type: OpenAPI
+    url: openapi/flexai-images-api-openapi.yml
+  - type: Documentation
+    url: https://docs.flex.ai
+  - type: APIReference
+    url: https://docs.flex.ai/inference-api/reference/openai-compatibility
+  - type: GettingStarted
+    url: https://docs.flex.ai/inference-api/quickstart
+  - type: Authentication
+    url: authentication/flexai-authentication.yml
+- aid: flexai:flexai-models-api
+  name: FlexAI Models API
+  description: Model catalog
+  humanURL: https://docs.flex.ai/inference-api/overview
+  baseURL: https://tokens.flex.ai/v1
+  tags:
+  - Models
+  properties:
+  - type: OpenAPI
+    url: openapi/flexai-models-api-openapi.yml
+  - type: Documentation
+    url: https://docs.flex.ai
+  - type: APIReference
+    url: https://docs.flex.ai/inference-api/reference/openai-compatibility
+  - type: GettingStarted
+    url: https://docs.flex.ai/inference-api/quickstart
+  - type: Authentication
+    url: authentication/flexai-authentication.yml
+- aid: flexai:flexai-video-api
+  name: FlexAI Video API
+  description: Video generation
+  humanURL: https://docs.flex.ai/inference-api/overview
+  baseURL: https://tokens.flex.ai/v1
+  tags:
+  - Video
+  properties:
+  - type: OpenAPI
+    url: openapi/flexai-video-api-openapi.yml
+  - type: Documentation
+    url: https://docs.flex.ai
+  - type: APIReference
+    url: https://docs.flex.ai/inference-api/reference/openai-compatibility
+  - type: GettingStarted
+    url: https://docs.flex.ai/inference-api/quickstart
+  - type: Authentication
+    url: authentication/flexai-authentication.yml
 common:
+- type: DomainSecurity
+  url: security/flexai-domain-security.yml
+- type: AgenticAccess
+  url: agentic-access/flexai-agentic-access.yml
 - type: Website
   url: https://www.flex.ai/
+- type: DeveloperPortal
+  url: https://docs.flex.ai
+- type: Documentation
+  url: https://docs.flex.ai
+- type: APIReference
+  url: https://docs.flex.ai/inference-api/reference/openai-compatibility
+- type: GettingStarted
+  url: https://docs.flex.ai/inference-api/quickstart
+- type: Blog
+  url: https://flex.ai/blog
+- type: Pricing
+  url: https://flex.ai/pricing
+- type: SignUp
+  url: https://tokens.flex.ai/signup
+- type: Support
+  url: mailto:support@flex.ai
+- type: TermsOfService
+  url: https://flex.ai/terms-of-service
+- type: PrivacyPolicy
+  url: https://flex.ai/privacy-policy
+- type: StatusPage
+  url: https://status.flex.ai
+- type: TrustCenter
+  url: https://security.flex.ai
+- type: LLMsTxt
+  url: llms/flexai-llms.txt
+- type: OpenAPI
+  url: openapi/flexai-token-factory-openapi.yml
+- type: Authentication
+  url: authentication/flexai-authentication.yml
+- type: Conventions
+  url: conventions/flexai-conventions.yml
+- type: RateLimits
+  url: rate-limits/flexai-rate-limits.yml
+- type: ErrorCatalog
+  url: errors/flexai-problem-types.yml
+- type: Lifecycle
+  url: lifecycle/flexai-lifecycle.yml
+- type: Conformance
+  url: conformance/flexai-conformance.yml
+- type: DataModel
+  url: data-model/flexai-data-model.yml
+- type: MCPServer
+  url: mcp/flexai-mcp.yml
+- type: AgentSkill
+  url: skills/_index.yml
+- type: Overlay
+  url: overlays/flexai-token-factory-overlay.yaml
+- type: Plans
+  url: plans/flexai-plans.yml
+x-enrichment:
+  date: '2026-07-19'
+  status: backfilled
+  pass: local-v1
+  note: backfilled from .gitignore signal + verified work evidence

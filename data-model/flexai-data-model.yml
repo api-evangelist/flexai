@@ -1,0 +1,47 @@
+generated: '2026-07-19'
+method: derived
+source: openapi/flexai-token-factory-openapi.yml
+description: >-
+  Entity graph derived from the FlexAI Token Factory OpenAPI schemas. The API is
+  stateless request/response inference (OpenAI-compatible); the only persistent
+  resource is the Model catalog. Chat completions are transient response objects
+  composed of messages and choices.
+entities:
+  - name: Model
+    id_field: id
+    description: A served open model (text, code, reasoning, vision, embedding, image, video, or audio).
+    source_schema: '#/components/schemas/Model'
+  - name: ChatCompletion
+    id_field: id
+    description: A transient chat completion response.
+    source_schema: '#/components/schemas/ChatCompletion'
+  - name: ChatMessage
+    description: A single message in a conversation (role + content).
+    source_schema: '#/components/schemas/ChatMessage'
+  - name: Choice
+    description: One generated choice within a chat completion.
+    source_schema: '#/components/schemas/ChatCompletion/choices'
+  - name: Usage
+    description: Token accounting for a completion (prompt/completion/total tokens).
+    source_schema: '#/components/schemas/ChatCompletion/usage'
+relationships:
+  - from: ChatCompletion
+    to: Choice
+    kind: has_many
+    via: choices
+  - from: Choice
+    to: ChatMessage
+    kind: has_one
+    via: message
+  - from: ChatCompletion
+    to: Usage
+    kind: has_one
+    via: usage
+  - from: ChatCompletion
+    to: Model
+    kind: belongs_to
+    via: model
+  - from: ChatCompletionRequest
+    to: ChatMessage
+    kind: has_many
+    via: messages

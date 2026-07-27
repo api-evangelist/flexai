@@ -1,0 +1,93 @@
+# FlexAI
+
+> FlexAI is managed inference for builders: an OpenAI-compatible API across
+> open models (Token Factory) with competitive performance and usage-based
+> rates per model, the Agent SDK (in trial), dedicated
+> endpoints and managed fine-tuning, and a private AI cloud (AI Factory),
+> all on one account.
+
+This file follows the llms.txt convention (https://llmstxt.org/) so that
+answer-engine and LLM crawlers can discover the canonical pages on flex.ai
+without parsing the marketing chrome.
+
+## Products
+
+- [Token Factory](https://flex.ai/token-factory): OpenAI-compatible inference API. One key across text, vision, image, video, and audio models, priced by usage (per token for text and vision; per image, per generated video, or per minute or million characters for audio).
+- [Dedicated Endpoints](https://flex.ai/dedicated-endpoints): Reserved GPU throughput for your models and fine-tunes, on the same OpenAI-compatible account.
+- [Models](https://flex.ai/models): The live model catalog: serverless (Token Factory) and dedicated-endpoint open models with per-model pricing and specs.
+- [Inference](https://flex.ai/inference): Serverless, batch, and dedicated inference endpoints with auto-scaling; dedicated GPUs are priced per GPU-hour and metered per second.
+- [Agent SDK](https://flex.ai/agent-sdk): Run your agents on FlexAI with runtime, model, and hardware independence. Available in trial for selected teams.
+- [Fine-tuning](https://flex.ai/fine-tuning): Managed fine-tuning with LoRA/QLoRA on open-source models.
+- [Training](https://flex.ai/training): Distributed training jobs with checkpoint resume and multi-node DDP.
+- [Platform overview](https://flex.ai/platform): How the managed AI services and infrastructure building blocks fit together.
+- [AI Factory](https://flex.ai/ai-factory): The FlexAI platform deployed on your own hardware: VPC, on-prem, or air-gapped. Talk to us.
+
+## Use cases
+
+- [Use cases](https://flex.ai/use-cases): Common agents built as multi-model pipelines behind one key.
+- [Coding agents](https://flex.ai/use-cases/coding-agents): Generate, review, and repair code (Qwen3 Coder, GPT-OSS).
+- [Research agents](https://flex.ai/use-cases/research-agents): Retrieve, reason, and synthesize (BGE-M3, DeepSeek).
+- [Support agents](https://flex.ai/use-cases/support-agents): Transcribe, retrieve, respond, and speak (Whisper, BGE-M3, GPT-OSS, Kokoro).
+- [Workflow automation](https://flex.ai/use-cases/workflow-automation): Plan and execute multi-step tool calls (GPT-OSS, Mistral).
+- [Multimodal generation](https://flex.ai/use-cases/multimodal-generation): Generate images and describe them (FLUX.1, Gemma).
+- [Private copilots](https://flex.ai/use-cases/private-copilots): Grounded assistants over your own data (BGE-M3, PaddleOCR, Llama).
+
+## Model families
+
+- [Qwen on FlexAI](https://flex.ai/models/qwen): Every served Qwen variant, serverless and dedicated, behind one key.
+- [DeepSeek on FlexAI](https://flex.ai/models/deepseek): Every served DeepSeek variant behind one key.
+- [GLM on FlexAI](https://flex.ai/models/glm): Every served GLM variant behind one key.
+- [Llama on FlexAI](https://flex.ai/models/llama): Every served Llama variant behind one key.
+- [Mistral on FlexAI](https://flex.ai/models/mistral): Every served Mistral variant behind one key.
+- [Gemma on FlexAI](https://flex.ai/models/gemma): Every served Gemma variant behind one key.
+- [Nemotron on FlexAI](https://flex.ai/models/nemotron): Every served Nemotron variant behind one key.
+- [GPT-OSS on FlexAI](https://flex.ai/models/gpt-oss): Every served GPT-OSS variant behind one key.
+
+## Capabilities
+
+- [Embeddings](https://flex.ai/embeddings): Open embedding models on the OpenAI-compatible /v1/embeddings endpoint, billed per token.
+- [Speech-to-text](https://flex.ai/speech-to-text): Open transcription models on /v1/audio/transcriptions, billed per minute.
+- [Text-to-speech](https://flex.ai/text-to-speech): Open TTS models on /v1/audio/speech, billed per character.
+- [Image generation](https://flex.ai/image-generation): Open image models on /v1/images/generations, billed per image.
+- [Video generation](https://flex.ai/video-generation): Open text-to-video (Wan2.2) on /v1/videos/generations (async), available on demand on dedicated GPUs.
+
+## Pricing & comparison
+
+- [Pricing](https://flex.ai/pricing): Serverless per-token rates (Token Factory), dedicated per-GPU-hour rates, and custom private-cloud tiers.
+- [Token Factory savings calculator](https://flex.ai/tools/open-source-llm-cost-calculator): Compare paying frontier-model APIs (OpenAI, Anthropic, Google) vs. equivalent-quality open models on FlexAI Token Factory.
+- [Savings calculator](https://flex.ai/tools/savings-calculator): Estimate GPU-compute spend reduction from migrating workloads to FlexAI.
+- [Serverless vs. dedicated](https://flex.ai/tools/serverless-vs-dedicated): Find the token volume where a dedicated endpoint beats per-token pricing.
+- [FlexAI vs AWS Bedrock](https://flex.ai/vs/aws-bedrock)
+- [FlexAI vs OpenAI](https://flex.ai/vs/openai)
+- [FlexAI vs Fireworks](https://flex.ai/vs/fireworks)
+- [FlexAI vs CoreWeave](https://flex.ai/vs/coreweave)
+
+## Case studies
+
+- [LegML](https://flex.ai/case-studies/legml): A 32B French legal LLM fine-tuned on FlexAI that outperformed a frontier model at lower cost.
+- [DragonLLM](https://flex.ai/case-studies/dragonllm): Private inference for finance, hosted in France. Autoscaling, scale-to-zero.
+- [Pixelcut](https://flex.ai/case-studies/pixelcut): Image-generation fine-tuning with pay-per-use economics.
+
+## Blog & technical content
+
+- [Engineering](https://flex.ai/engineering): The engineering pillar: benchmarks, heterogeneous compute, training and RL, and the agent harness.
+- [Blog](https://flex.ai/blog): Engineering and product writing on AI infrastructure.
+- [Blueprints](https://flex.ai/blueprints): Reference recipes for common workloads (RAG, multi-agent, text-to-video, RL fine-tuning).
+- [Documentation](https://docs.flex.ai): Full developer documentation, API reference, and runtime guides.
+
+## Company
+
+- [Why Us](https://flex.ai/why-us): From making compute fluid to managed inference. Why FlexAI leads with Token Factory.
+- [Growing AI teams](https://flex.ai/companies): FlexAI for growing AI teams, scale production AI on one account.
+- [Enterprise](https://flex.ai/enterprise): Private AI cloud: VPC, on-prem, and air-gapped deployment paths.
+- [System Integrators](https://flex.ai/system-integrators): Resell and white-label FlexAI managed AI infrastructure to your customers.
+- [Partnerships](https://flex.ai/partnerships): Work with FlexAI as a compute, model, or technology partner.
+- [Startup Program](https://flex.ai/startups): Credits, discounts, and onboarding for early-stage AI companies.
+- [Careers](https://flex.ai/careers): Open roles.
+- [Contact](https://flex.ai/contact): Sales, partnerships, and general inquiries.
+
+## Legal
+
+- [Privacy policy](https://flex.ai/privacy-policy)
+- [Terms of service](https://flex.ai/terms-of-service)
+- [Acceptable use policy](https://flex.ai/acceptable-use-policy)

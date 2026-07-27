@@ -1,0 +1,116 @@
+specification: API Commons Plans
+specificationVersion: '0.1'
+generated: '2026-07-19'
+method: searched
+source: https://flex.ai/pricing and https://docs.flex.ai/inference-api/reference/billing
+provider: FlexAI
+providerId: flexai
+created: '2026-07-19'
+modified: '2026-07-19'
+tags:
+  - Inference
+  - Usage Based
+  - GPU Compute
+description: >-
+  FlexAI is usage-priced. Token Factory (serverless) is billed per model by
+  usage (per million tokens for text/vision, per image, per generated video,
+  per minute of audio, per million characters for TTS). Dedicated endpoints are
+  priced per GPU-hour metered per second. New accounts receive $10 free credit;
+  request rate limits are tiered free (10 rpm) vs. paid (100 rpm).
+plans:
+  - id: flexai-token-factory-serverless
+    name: Token Factory (Serverless)
+    type: usage-based
+    description: Pay-per-use serverless inference across open models, priced per model.
+    entries:
+      - label: Text / chat / reasoning input
+        name: text_input
+        type: metered
+        metric: tokens
+        limit: -1
+        timeFrame: usage
+        unit: 1000000
+        price: per-model (per million input tokens)
+        userMultiplied: false
+      - label: Text / chat / reasoning output
+        name: text_output
+        type: metered
+        metric: tokens
+        limit: -1
+        timeFrame: usage
+        unit: 1000000
+        price: per-model (per million output tokens)
+        userMultiplied: false
+      - label: Embeddings
+        name: embeddings
+        type: metered
+        metric: tokens
+        limit: -1
+        timeFrame: usage
+        unit: 1000000
+        price: per-model (per million input tokens)
+        userMultiplied: false
+      - label: Image generation
+        name: images
+        type: metered
+        metric: image
+        limit: -1
+        timeFrame: usage
+        unit: 1
+        price: per image
+        userMultiplied: false
+      - label: Video generation
+        name: video
+        type: metered
+        metric: video
+        limit: -1
+        timeFrame: usage
+        unit: 1
+        price: per generated video
+        userMultiplied: false
+      - label: Speech-to-text
+        name: stt
+        type: metered
+        metric: minute
+        limit: -1
+        timeFrame: usage
+        unit: 1
+        price: per minute
+        userMultiplied: false
+      - label: Text-to-speech
+        name: tts
+        type: metered
+        metric: character
+        limit: -1
+        timeFrame: usage
+        unit: 1000000
+        price: per million characters
+        userMultiplied: false
+  - id: flexai-dedicated-endpoints
+    name: Dedicated Endpoints
+    type: usage-based
+    description: Reserved GPU throughput for your models and fine-tunes, priced per GPU-hour metered per second.
+    entries:
+      - label: Dedicated GPU
+        name: gpu_hour
+        type: metered
+        metric: gpu_hour
+        limit: -1
+        timeFrame: usage
+        unit: 1
+        price: per GPU-hour (metered per second)
+        userMultiplied: false
+  - id: flexai-ai-factory
+    name: AI Factory (Private Cloud)
+    type: custom
+    description: FlexAI platform on your own hardware — VPC, on-prem, or air-gapped. Custom pricing; contact sales.
+    entries:
+      - label: Custom private-cloud tier
+        name: custom
+        type: custom
+        metric: contract
+        limit: -1
+        timeFrame: usage
+        unit: 1
+        price: contact sales
+        userMultiplied: false

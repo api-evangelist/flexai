@@ -1,0 +1,27 @@
+generated: '2026-07-19'
+method: searched
+source: >-
+  https://docs.flex.ai and https://status.flex.ai — versioning and operational
+  posture of the FlexAI Token Factory API.
+description: >-
+  Lifecycle posture for the FlexAI Token Factory API: URI-path versioning (/v1),
+  a public status page, and a live model catalog whose contents change over
+  time. FlexAI does not publish a formal deprecation/sunset policy or an SLA
+  document for the serverless Token Factory tier.
+versioning:
+  scheme: uri-path
+  current: v1
+  docs: https://docs.flex.ai/inference-api/reference/openai-compatibility
+deprecation:
+  policy_url: null
+  sunset_header: false
+  note: >-
+    No formal deprecation or RFC 8594 Sunset/Deprecation header policy is
+    documented. The /v1/models catalog is live and models may be added or
+    retired over time; unsupported OpenAI endpoints (assistants, threads, runs,
+    files, fine-tuning via /v1/fine-tuning) are documented as not served.
+sla:
+  url: null
+  note: No published uptime SLA for the serverless Token Factory tier.
+status_page: https://status.flex.ai
+deprecated_operations: []

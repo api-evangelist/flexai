@@ -1,0 +1,47 @@
+specification: API Commons Rate Limits
+specificationVersion: '0.1'
+generated: '2026-07-19'
+method: searched
+source: https://docs.flex.ai/inference-api/reference/billing
+provider: FlexAI
+providerId: flexai
+created: '2026-07-19'
+modified: '2026-07-19'
+tags:
+  - Rate Limiting
+  - Inference
+description: >-
+  FlexAI Token Factory enforces per-API-key request rate limits, tiered by
+  account status (free vs. paid), plus a prepaid account budget. Exceeding the
+  rate limit returns 429 with a Retry-After header; exhausting the account
+  budget returns 402 Payment Required.
+headers:
+  limit: x-ratelimit-limit-requests
+  remaining: x-ratelimit-remaining-requests
+  reset: x-ratelimit-reset-requests
+  retryAfter: Retry-After
+responseCodes:
+  throttled: 429
+  paymentRequired: 402
+limits:
+  - name: Free tier requests
+    scope: api_key
+    metric: requests_per_minute
+    limit: 10
+    timeFrame: minute
+  - name: Paid tier requests
+    scope: api_key
+    metric: requests_per_minute
+    limit: 100
+    timeFrame: minute
+  - name: Custom / Enterprise
+    scope: api_key
+    metric: requests_per_minute
+    limit: -1
+    timeFrame: minute
+    note: Higher limits available on request via dashboard or support@flex.ai.
+budget:
+  free_credit: "$10 free credit on new accounts"
+  exhausted_response: 402 Payment Required
+  minimum_top_up: "$5"
+  auto_recharge: false

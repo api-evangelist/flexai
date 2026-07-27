@@ -1,0 +1,49 @@
+generated: '2026-07-19'
+method: derived
+source: >-
+  openapi/flexai-token-factory-openapi.yml (4xx/5xx responses) enriched from
+  https://docs.flex.ai/inference-api/reference/openai-compatibility and
+  /billing
+format: openai-error-object
+envelope: '{ "error": { "message", "type", "param", "code", "doc_url" } }'
+description: >-
+  Error catalog for the FlexAI Token Factory API. Errors use the
+  OpenAI-compatible error object (not RFC 9457 problem+json). `param` identifies
+  the offending request field; `authentication_error` responses include a
+  `doc_url` extension linking to the auth docs.
+problems:
+  - status: 400
+    code: invalid_request_error
+    title: Request validation failed
+    detail: >-
+      A request parameter was missing or invalid. The error object's `param`
+      field indicates the offending path. Also returned when `n` > 1 (multiple
+      choices are not supported).
+    source_operation: openapi/flexai-token-factory-openapi.yml#createChatCompletion
+  - status: 400
+    code: context_length_exceeded
+    title: Context length exceeded
+    detail: The combined input exceeds the selected model's context window.
+    source_operation: openapi/flexai-token-factory-openapi.yml#createChatCompletion
+  - status: 401
+    code: authentication_error
+    title: Invalid API key
+    detail: >-
+      The API key is missing or invalid. The error object includes a `doc_url`
+      extension pointing at the authentication documentation.
+    source_operation: openapi/flexai-token-factory-openapi.yml#listModels
+  - status: 402
+    code: payment_required
+    title: Account budget exhausted
+    detail: >-
+      The prepaid account credit is exhausted. Add funds (minimum $5 top-up) in
+      the dashboard to resume requests.
+    source_operation: openapi/flexai-token-factory-openapi.yml#createChatCompletion
+  - status: 429
+    code: rate_limit_exceeded
+    title: Rate limit exceeded
+    detail: >-
+      The per-API-key request rate limit was exceeded (10 rpm free, 100 rpm
+      paid). Response includes a Retry-After header (seconds) and x-ratelimit-*
+      headers.
+    source_operation: openapi/flexai-token-factory-openapi.yml#createChatCompletion
