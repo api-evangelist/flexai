@@ -181,6 +181,8 @@ apis:
   - type: Authentication
     url: authentication/flexai-authentication.yml
 common:
+- type: PostmanWorkspace
+  url: https://www.postman.com/kinlaneapi/flexai/overview
 - type: DomainSecurity
   url: security/flexai-domain-security.yml
 - type: AgenticAccess
