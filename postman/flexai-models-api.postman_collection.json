@@ -1,0 +1,154 @@
+{
+  "info": {
+    "_postman_id": "06653258-8547-4a4c-99d4-96db18fe9f1b",
+    "name": "FlexAI Token Factory Audio Models API",
+    "description": "OpenAI-compatible inference API for FlexAI Token Factory. A single API key provides access to open models across text, code, reasoning, vision, embedding, image, video, and audio modalities, priced by usage per model. The API is a drop-in replacement for the OpenAI API: point the OpenAI SDK (or any OpenAI-compatible client) at the FlexAI base URL and supply a FlexAI API key. This specification captures the endpoints FlexAI documents as supported; some OpenAI endpoints (assistants, threads, runs, files, fine-tuning, batches) are explicitly not served by this endpoint.\n\nContact Support:\n Name: FlexAI",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "createdAt": "2026-07-28T01:40:11.000Z",
+    "updatedAt": "2026-07-28T01:40:11.000Z",
+    "lastUpdatedBy": "35240",
+    "uid": "35240-06653258-8547-4a4c-99d4-96db18fe9f1b"
+  },
+  "item": [
+    {
+      "name": "models",
+      "item": [
+        {
+          "name": "List available models",
+          "id": "138bc2c2-56aa-47b9-a922-aba3b8b221a9",
+          "protocolProfileBehavior": {
+            "disableBodyPruning": true
+          },
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/models",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "models"
+              ]
+            },
+            "description": "Return the live catalog of models served by FlexAI across all modalities, with category annotations (text, code, reasoning, vision, embedding, image, video, audio)."
+          },
+          "response": [
+            {
+              "id": "ab9864c2-84fc-4253-b180-eb2b4e0a8766",
+              "name": "The list of available models",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": "Added as a part of security scheme: bearer",
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/models",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "models"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "responseTime": null,
+              "body": "{\n  \"object\": \"<string>\",\n  \"data\": [\n    {\n      \"id\": \"<string>\",\n      \"object\": \"<string>\",\n      \"created\": \"<integer>\",\n      \"owned_by\": \"<string>\"\n    },\n    {\n      \"id\": \"<string>\",\n      \"object\": \"<string>\",\n      \"created\": \"<integer>\",\n      \"owned_by\": \"<string>\"\n    }\n  ]\n}",
+              "createdAt": "2026-07-28T01:40:11.000Z",
+              "updatedAt": "2026-07-28T01:40:11.000Z",
+              "uid": "35240-ab9864c2-84fc-4253-b180-eb2b4e0a8766"
+            },
+            {
+              "id": "96dd9984-8095-4155-aa10-1721e0a3a3b8",
+              "name": "Invalid or missing API key (error code `authentication_error`; includes a `doc_url` extension pointing at the auth docs).",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  },
+                  {
+                    "description": "Added as a part of security scheme: bearer",
+                    "key": "Authorization",
+                    "value": "Bearer <token>"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/models",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "models"
+                  ]
+                }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "cookie": [],
+              "responseTime": null,
+              "body": "{\n  \"error\": {\n    \"message\": \"<string>\",\n    \"type\": \"<string>\",\n    \"param\": \"<string>\",\n    \"code\": \"<string>\",\n    \"doc_url\": \"<string>\"\n  }\n}",
+              "createdAt": "2026-07-28T01:40:11.000Z",
+              "updatedAt": "2026-07-28T01:40:11.000Z",
+              "uid": "35240-96dd9984-8095-4155-aa10-1721e0a3a3b8"
+            }
+          ],
+          "createdAt": "2026-07-28T01:40:11.000Z",
+          "updatedAt": "2026-07-28T01:40:11.000Z",
+          "uid": "35240-138bc2c2-56aa-47b9-a922-aba3b8b221a9"
+        }
+      ],
+      "id": "38fa60c5-9334-40a7-9298-0997ce2bb7d7",
+      "createdAt": "2026-07-28T01:40:11.000Z",
+      "updatedAt": "2026-07-28T01:40:11.000Z",
+      "uid": "35240-38fa60c5-9334-40a7-9298-0997ce2bb7d7"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{bearerToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://tokens.flex.ai/v1"
+    }
+  ]
+}
