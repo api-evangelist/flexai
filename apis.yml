@@ -216,7 +216,7 @@ common:
 - type: LLMsTxt
   url: llms/flexai-llms.txt
 - type: OpenAPI
-  url: openapi/flexai-token-factory-openapi.yml
+  url: openapi/_original/flexai-token-factory-openapi.yml
 - type: Authentication
   url: authentication/flexai-authentication.yml
 - type: Conventions
