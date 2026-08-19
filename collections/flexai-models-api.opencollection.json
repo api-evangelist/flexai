@@ -1,0 +1,35 @@
+{
+  "opencollection": "1.0.0",
+  "info": {
+    "name": "FlexAI Token Factory Audio Models API",
+    "version": "v1"
+  },
+  "request": {
+    "auth": {
+      "type": "bearer",
+      "token": "{{bearerToken}}"
+    }
+  },
+  "items": [
+    {
+      "info": {
+        "name": "Models",
+        "type": "folder"
+      },
+      "items": [
+        {
+          "info": {
+            "name": "List available models",
+            "type": "http"
+          },
+          "http": {
+            "method": "GET",
+            "url": "https://tokens.flex.ai/v1/models"
+          },
+          "docs": "Return the live catalog of models served by FlexAI across all modalities, with category annotations (text, code, reasoning, vision, embedding, image, video, audio)."
+        }
+      ]
+    }
+  ],
+  "bundled": true
+}

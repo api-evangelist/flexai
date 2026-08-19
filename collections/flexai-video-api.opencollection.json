@@ -1,0 +1,39 @@
+{
+  "opencollection": "1.0.0",
+  "info": {
+    "name": "FlexAI Token Factory Audio Video API",
+    "version": "v1"
+  },
+  "request": {
+    "auth": {
+      "type": "bearer",
+      "token": "{{bearerToken}}"
+    }
+  },
+  "items": [
+    {
+      "info": {
+        "name": "Video",
+        "type": "folder"
+      },
+      "items": [
+        {
+          "info": {
+            "name": "Generate video (async)",
+            "type": "http"
+          },
+          "http": {
+            "method": "POST",
+            "url": "https://tokens.flex.ai/v1/videos/generations",
+            "body": {
+              "type": "json",
+              "data": "{}"
+            }
+          },
+          "docs": "Generate video from a text prompt using an open text-to-video model (Wan2.2). Asynchronous; available on demand on dedicated GPUs. Billed per generated video."
+        }
+      ]
+    }
+  ],
+  "bundled": true
+}

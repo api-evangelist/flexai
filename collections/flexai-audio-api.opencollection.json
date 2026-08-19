@@ -1,0 +1,65 @@
+{
+  "opencollection": "1.0.0",
+  "info": {
+    "name": "FlexAI Token Factory Audio API",
+    "version": "v1"
+  },
+  "request": {
+    "auth": {
+      "type": "bearer",
+      "token": "{{bearerToken}}"
+    }
+  },
+  "items": [
+    {
+      "info": {
+        "name": "Audio",
+        "type": "folder"
+      },
+      "items": [
+        {
+          "info": {
+            "name": "Transcribe audio to text (speech-to-text)",
+            "type": "http"
+          },
+          "http": {
+            "method": "POST",
+            "url": "https://tokens.flex.ai/v1/audio/transcriptions",
+            "body": {
+              "type": "multipart-form",
+              "data": [
+                {
+                  "name": "model",
+                  "type": "text",
+                  "value": ""
+                },
+                {
+                  "name": "file",
+                  "type": "text",
+                  "value": ""
+                }
+              ]
+            }
+          },
+          "docs": "Transcribe audio using an open transcription model (e.g. Whisper). Billed per minute of audio."
+        },
+        {
+          "info": {
+            "name": "Synthesize speech from text (text-to-speech)",
+            "type": "http"
+          },
+          "http": {
+            "method": "POST",
+            "url": "https://tokens.flex.ai/v1/audio/speech",
+            "body": {
+              "type": "json",
+              "data": "{}"
+            }
+          },
+          "docs": "Generate audio from input text using an open TTS model (e.g. Kokoro). Billed per character."
+        }
+      ]
+    }
+  ],
+  "bundled": true
+}

@@ -1,0 +1,39 @@
+{
+  "opencollection": "1.0.0",
+  "info": {
+    "name": "FlexAI Token Factory Audio Images API",
+    "version": "v1"
+  },
+  "request": {
+    "auth": {
+      "type": "bearer",
+      "token": "{{bearerToken}}"
+    }
+  },
+  "items": [
+    {
+      "info": {
+        "name": "Images",
+        "type": "folder"
+      },
+      "items": [
+        {
+          "info": {
+            "name": "Generate images",
+            "type": "http"
+          },
+          "http": {
+            "method": "POST",
+            "url": "https://tokens.flex.ai/v1/images/generations",
+            "body": {
+              "type": "json",
+              "data": "{}"
+            }
+          },
+          "docs": "Generate one or more images from a text prompt using an open image model (e.g. FLUX.1). Billed per image."
+        }
+      ]
+    }
+  ],
+  "bundled": true
+}

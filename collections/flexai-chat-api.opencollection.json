@@ -1,0 +1,39 @@
+{
+  "opencollection": "1.0.0",
+  "info": {
+    "name": "FlexAI Token Factory Audio Chat API",
+    "version": "v1"
+  },
+  "request": {
+    "auth": {
+      "type": "bearer",
+      "token": "{{bearerToken}}"
+    }
+  },
+  "items": [
+    {
+      "info": {
+        "name": "Chat",
+        "type": "folder"
+      },
+      "items": [
+        {
+          "info": {
+            "name": "Create a chat completion",
+            "type": "http"
+          },
+          "http": {
+            "method": "POST",
+            "url": "https://tokens.flex.ai/v1/chat/completions",
+            "body": {
+              "type": "json",
+              "data": "{}"
+            }
+          },
+          "docs": "Generate a model response for a chat conversation. OpenAI-compatible. Supports streaming via server-sent events when stream=true. Note: non-streaming responses are capped at 2048 output tokens regardless of max_tokens (finish_reason \"length\"); n > 1 is rejected with a 400."
+        }
+      ]
+    }
+  ],
+  "bundled": true
+}
