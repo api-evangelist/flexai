@@ -37,6 +37,19 @@ created: '2026-07-17'
 modified: '2026-07-19'
 tags:
 - Company
+- Ai Ml
+- Artificial Intelligence
+- Machine-Learning
+- Inference
+- LLM
+- Large Language Models
+- OpenAI-Compatible
+- GPU Compute
+- Embeddings
+- Fine-Tuning
+- Agents
+tags_raw:
+- Company
 - Ai/Ml
 - Artificial Intelligence
 - Machine Learning
@@ -132,6 +145,8 @@ apis:
   humanURL: https://docs.flex.ai/inference-api/overview
   baseURL: https://tokens.flex.ai/v1
   tags:
+  - Image
+  tags_raw:
   - Images
   properties:
   - type: OpenAPI
