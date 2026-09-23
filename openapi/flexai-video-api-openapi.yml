@@ -1,8 +1,8 @@
-openapi: 3.0.3
+openapi: 3.2.0
 info:
-  title: FlexAI Token Factory Audio Video API
+  title: FlexAI Token Factory Video API
   version: v1
-  description: 'OpenAI-compatible inference API for FlexAI Token Factory. A single API key provides access to open models across text, code, reasoning, vision, embedding, image, video, and audio modalities, priced by usage per model. The API is a drop-in replacement for the OpenAI API: point the OpenAI SDK (or any OpenAI-compatible client) at the FlexAI base URL and supply a FlexAI API key. This specification captures the endpoints FlexAI documents as supported; some OpenAI endpoints (assistants, threads, runs, files, fine-tuning, batches) are explicitly not served by this endpoint.'
+  description: OpenAI-compatible inference API for FlexAI Token Factory.
   contact:
     name: FlexAI
     url: https://docs.flex.ai
@@ -52,14 +52,14 @@ paths:
           $ref: '#/components/responses/TooManyRequests'
 components:
   responses:
-    Unauthorized:
-      description: Invalid or missing API key (error code `authentication_error`; includes a `doc_url` extension pointing at the auth docs).
+    BadRequest:
+      description: Request validation failure. The error object includes a `param` field indicating the offending path (OpenAI-compatible error envelope).
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-    BadRequest:
-      description: Request validation failure. The error object includes a `param` field indicating the offending path (OpenAI-compatible error envelope).
+    Unauthorized:
+      description: Invalid or missing API key (error code `authentication_error`; includes a `doc_url` extension pointing at the auth docs).
       content:
         application/json:
           schema:
@@ -87,8 +87,9 @@ components:
             type:
               type: string
             param:
-              type: string
-              nullable: true
+              type:
+              - string
+              - 'null'
             code:
               type: string
             doc_url:

@@ -1,0 +1,33 @@
+# Front Door AI Index — flexai — 2026-09-17
+# AI vocabulary counted on the provider's root page. Generated; do not edit.
+# `score` is null unless ownership is `own` — see front_door_ai.py.
+front_door_ai:
+  slug: flexai
+  lexicon_version: '1.0'
+  probed_at: '2026-09-17'
+  host: www.flex.ai
+  final_host: flex.ai
+  ownership: own
+  owner: flexai
+  shares_host_with: null
+  inherited_from: null
+  verdict: scored
+  score: 32
+  host_score: 32
+  density: 32.69
+  words: 979
+  tiers:
+    agentic: 10
+    core: 8
+    model: 14
+  ambiguous: 11
+  top_terms:
+    agent: 11
+    OpenAI: 10
+    AI: 8
+    inference: 6
+    Bedrock: 2
+    fine-tune: 2
+    transformer: 2
+    copilot: 1
+    embedding: 1
