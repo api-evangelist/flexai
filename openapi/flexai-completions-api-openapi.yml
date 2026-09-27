@@ -64,12 +64,6 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/ErrorResponse'
-    Unauthorized:
-      description: Invalid or missing API key (error code `authentication_error`; includes a `doc_url` extension pointing at the auth docs).
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
     TooManyRequests:
       description: Account-level rate limit or budget exceeded. Includes `Retry-After` and `x-ratelimit-*` response headers.
       headers:
@@ -77,6 +71,12 @@ components:
           schema:
             type: integer
           description: Seconds to wait before retrying.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Invalid or missing API key (error code `authentication_error`; includes a `doc_url` extension pointing at the auth docs).
       content:
         application/json:
           schema:

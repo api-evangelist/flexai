@@ -53,7 +53,7 @@ tags:
 - Company
 - Ai Ml
 - Artificial Intelligence
-- Machine-Learning
+- Machine Learning
 - Inference
 - LLM
 - OpenAI-Compatible
@@ -74,6 +74,7 @@ tags_raw:
 - Embeddings
 - Fine-Tuning
 - Agents
+- Machine-Learning
 maintainers:
 - FN: Kin Lane
   email: kin@apievangelist.com
