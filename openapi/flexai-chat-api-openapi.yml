@@ -47,44 +47,48 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 components:
+  responses:
+    BadRequest:
+      description: Request validation failure. The error object includes a `param` field indicating the offending path (OpenAI-compatible error envelope).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Invalid or missing API key (error code `authentication_error`; includes a `doc_url` extension pointing at the auth docs).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TooManyRequests:
+      description: Account-level rate limit or budget exceeded. Includes `Retry-After` and `x-ratelimit-*` response headers.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
   schemas:
-    ChatCompletion:
+    ChatMessage:
       type: object
+      required:
+      - role
+      - content
       properties:
-        id:
+        role:
           type: string
-        object:
+          enum:
+          - system
+          - user
+          - assistant
+          - tool
+        content:
           type: string
-          example: chat.completion
-        created:
-          type: integer
-        model:
+        name:
           type: string
-        choices:
-          type: array
-          items:
-            type: object
-            properties:
-              index:
-                type: integer
-              message:
-                $ref: '#/components/schemas/ChatMessage'
-              finish_reason:
-                type: string
-                enum:
-                - stop
-                - length
-                - tool_calls
-                - content_filter
-        usage:
-          type: object
-          properties:
-            prompt_tokens:
-              type: integer
-            completion_tokens:
-              type: integer
-            total_tokens:
-              type: integer
     ErrorResponse:
       type: object
       properties:
@@ -103,23 +107,6 @@ components:
               type: string
             doc_url:
               type: string
-    ChatMessage:
-      type: object
-      required:
-      - role
-      - content
-      properties:
-        role:
-          type: string
-          enum:
-          - system
-          - user
-          - assistant
-          - tool
-        content:
-          type: string
-        name:
-          type: string
     ChatCompletionRequest:
       type: object
       required:
@@ -171,30 +158,43 @@ components:
           type: number
         frequency_penalty:
           type: number
-  responses:
-    TooManyRequests:
-      description: Account-level rate limit or budget exceeded. Includes `Retry-After` and `x-ratelimit-*` response headers.
-      headers:
-        Retry-After:
-          schema:
-            type: integer
-          description: Seconds to wait before retrying.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    Unauthorized:
-      description: Invalid or missing API key (error code `authentication_error`; includes a `doc_url` extension pointing at the auth docs).
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    BadRequest:
-      description: Request validation failure. The error object includes a `param` field indicating the offending path (OpenAI-compatible error envelope).
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
+    ChatCompletion:
+      type: object
+      properties:
+        id:
+          type: string
+        object:
+          type: string
+          example: chat.completion
+        created:
+          type: integer
+        model:
+          type: string
+        choices:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: integer
+              message:
+                $ref: '#/components/schemas/ChatMessage'
+              finish_reason:
+                type: string
+                enum:
+                - stop
+                - length
+                - tool_calls
+                - content_filter
+        usage:
+          type: object
+          properties:
+            prompt_tokens:
+              type: integer
+            completion_tokens:
+              type: integer
+            total_tokens:
+              type: integer
   securitySchemes:
     bearerAuth:
       type: http
