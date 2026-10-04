@@ -17,7 +17,7 @@ servers:
 security:
 - bearerAuth: []
 tags:
-- name: Chat
+- name: Chat Completions
   description: Chat completions
 paths:
   /chat/completions:
@@ -26,7 +26,7 @@ paths:
       summary: Create a chat completion
       description: 'Generate a model response for a chat conversation. OpenAI-compatible. Supports streaming via server-sent events when stream=true. Note: non-streaming responses are capped at 2048 output tokens regardless of max_tokens (finish_reason "length"); n > 1 is rejected with a 400.'
       tags:
-      - Chat
+      - Chat Completions
       requestBody:
         required: true
         content:
@@ -47,30 +47,6 @@ paths:
         '429':
           $ref: '#/components/responses/TooManyRequests'
 components:
-  responses:
-    BadRequest:
-      description: Request validation failure. The error object includes a `param` field indicating the offending path (OpenAI-compatible error envelope).
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    Unauthorized:
-      description: Invalid or missing API key (error code `authentication_error`; includes a `doc_url` extension pointing at the auth docs).
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    TooManyRequests:
-      description: Account-level rate limit or budget exceeded. Includes `Retry-After` and `x-ratelimit-*` response headers.
-      headers:
-        Retry-After:
-          schema:
-            type: integer
-          description: Seconds to wait before retrying.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
   schemas:
     ChatMessage:
       type: object
@@ -89,24 +65,6 @@ components:
           type: string
         name:
           type: string
-    ErrorResponse:
-      type: object
-      properties:
-        error:
-          type: object
-          properties:
-            message:
-              type: string
-            type:
-              type: string
-            param:
-              type:
-              - string
-              - 'null'
-            code:
-              type: string
-            doc_url:
-              type: string
     ChatCompletionRequest:
       type: object
       required:
@@ -195,6 +153,48 @@ components:
               type: integer
             total_tokens:
               type: integer
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            type:
+              type: string
+            param:
+              type:
+              - string
+              - 'null'
+            code:
+              type: string
+            doc_url:
+              type: string
+  responses:
+    Unauthorized:
+      description: Invalid or missing API key (error code `authentication_error`; includes a `doc_url` extension pointing at the auth docs).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    BadRequest:
+      description: Request validation failure. The error object includes a `param` field indicating the offending path (OpenAI-compatible error envelope).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TooManyRequests:
+      description: Account-level rate limit or budget exceeded. Includes `Retry-After` and `x-ratelimit-*` response headers.
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds to wait before retrying.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
   securitySchemes:
     bearerAuth:
       type: http

@@ -102,24 +102,6 @@ apis:
     url: https://docs.flex.ai/inference-api/quickstart
   - type: Authentication
     url: authentication/flexai-authentication.yml
-- aid: flexai:flexai-chat-api
-  name: FlexAI Chat API
-  description: Chat completions
-  humanURL: https://docs.flex.ai/inference-api/overview
-  baseURL: https://tokens.flex.ai/v1
-  tags:
-  - Chat
-  properties:
-  - type: OpenAPI
-    url: openapi/flexai-chat-api-openapi.yml
-  - type: Documentation
-    url: https://docs.flex.ai
-  - type: APIReference
-    url: https://docs.flex.ai/inference-api/reference/openai-compatibility
-  - type: GettingStarted
-    url: https://docs.flex.ai/inference-api/quickstart
-  - type: Authentication
-    url: authentication/flexai-authentication.yml
 - aid: flexai:flexai-completions-api
   name: FlexAI Completions API
   description: Legacy text completions
@@ -204,6 +186,24 @@ apis:
   properties:
   - type: OpenAPI
     url: openapi/flexai-video-api-openapi.yml
+  - type: Documentation
+    url: https://docs.flex.ai
+  - type: APIReference
+    url: https://docs.flex.ai/inference-api/reference/openai-compatibility
+  - type: GettingStarted
+    url: https://docs.flex.ai/inference-api/quickstart
+  - type: Authentication
+    url: authentication/flexai-authentication.yml
+- aid: flexai:flexai-chat-completions-api
+  name: FlexAI Chat Completions API
+  description: Chat completions
+  humanURL: https://docs.flex.ai/inference-api/overview
+  baseURL: https://tokens.flex.ai/v1
+  tags:
+  - Chat Completions
+  properties:
+  - type: OpenAPI
+    url: openapi/flexai-chat-completions-api-openapi.yml
   - type: Documentation
     url: https://docs.flex.ai
   - type: APIReference
