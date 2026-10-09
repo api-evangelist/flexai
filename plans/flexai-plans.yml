@@ -114,3 +114,42 @@ plans:
         unit: 1
         price: contact sales
         userMultiplied: false
+x-canonical:
+  generated: '2026-10-08'
+  vocabulary: all/0-working/economics/plans-canonical.yml
+  models:
+  - metered
+  - negotiated
+  units:
+  - compute
+  - negotiated
+  - object
+  - token
+  plans:
+  - name: Token Factory (Serverless)
+    access: other
+    model: metered
+    model_how: stated
+    units:
+    - compute
+    - object
+    - other
+    - token
+    periods:
+    - per-use
+  - name: Dedicated Endpoints
+    access: other
+    model: metered
+    model_how: stated
+    units:
+    - compute
+    periods:
+    - per-use
+  - name: AI Factory (Private Cloud)
+    access: negotiated
+    model: negotiated
+    model_how: stated
+    units:
+    - negotiated
+    periods:
+    - per-use
