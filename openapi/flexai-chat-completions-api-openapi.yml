@@ -48,23 +48,6 @@ paths:
           $ref: '#/components/responses/TooManyRequests'
 components:
   schemas:
-    ChatMessage:
-      type: object
-      required:
-      - role
-      - content
-      properties:
-        role:
-          type: string
-          enum:
-          - system
-          - user
-          - assistant
-          - tool
-        content:
-          type: string
-        name:
-          type: string
     ChatCompletionRequest:
       type: object
       required:
@@ -116,6 +99,23 @@ components:
           type: number
         frequency_penalty:
           type: number
+    ChatMessage:
+      type: object
+      required:
+      - role
+      - content
+      properties:
+        role:
+          type: string
+          enum:
+          - system
+          - user
+          - assistant
+          - tool
+        content:
+          type: string
+        name:
+          type: string
     ChatCompletion:
       type: object
       properties:
@@ -172,12 +172,6 @@ components:
             doc_url:
               type: string
   responses:
-    Unauthorized:
-      description: Invalid or missing API key (error code `authentication_error`; includes a `doc_url` extension pointing at the auth docs).
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
     BadRequest:
       description: Request validation failure. The error object includes a `param` field indicating the offending path (OpenAI-compatible error envelope).
       content:
@@ -191,6 +185,12 @@ components:
           schema:
             type: integer
           description: Seconds to wait before retrying.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Invalid or missing API key (error code `authentication_error`; includes a `doc_url` extension pointing at the auth docs).
       content:
         application/json:
           schema:
