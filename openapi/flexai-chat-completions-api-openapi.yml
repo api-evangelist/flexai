@@ -1,202 +1,555 @@
 openapi: 3.2.0
 info:
-  title: FlexAI Token Factory Chat API
-  version: v1
-  description: OpenAI-compatible inference API for FlexAI Token Factory.
+  title: FlexAI Inference Chat API
+  version: 1.0.0
+  description: 'OpenAI-compatible inference API for text, code, reasoning, vision, and
+
+    embedding models hosted by FlexAI. Use any OpenAI SDK by pointing the
+
+    `base_url` at this service.'
   contact:
-    name: FlexAI
-    url: https://docs.flex.ai
-  termsOfService: https://flex.ai/terms-of-service
-  x-provenance:
-    generated: '2026-07-19'
-    method: generated
-    source: https://docs.flex.ai/inference-api/reference/openai-compatibility and https://flex.ai/llms.txt — generated from FlexAI's documented OpenAI-compatible endpoint surface. Not a provider-published OpenAPI file.
+    name: FlexAI Support
+    email: support@flex.ai
+    url: https://docs.flex.ai/inference-api/overview
 servers:
-- url: https://tokens.flex.ai/v1
-  description: FlexAI Token Factory (serverless inference)
+- url: https://api.flex.ai
+  description: Production (US)
+- url: https://eu.api.flex.ai
+  description: Production (EU)
 security:
 - bearerAuth: []
 tags:
 - name: Chat Completions
-  description: Chat completions
+  description: Chat completions (streaming, tool use, vision).
 paths:
-  /chat/completions:
+  /v1/chat/completions:
     post:
-      operationId: createChatCompletion
-      summary: Create a chat completion
-      description: 'Generate a model response for a chat conversation. OpenAI-compatible. Supports streaming via server-sent events when stream=true. Note: non-streaming responses are capped at 2048 output tokens regardless of max_tokens (finish_reason "length"); n > 1 is rejected with a 400.'
       tags:
       - Chat Completions
+      summary: Create a chat completion
+      description: 'Given a list of messages, returns a model-generated response. Supports
+
+        streaming (SSE), tool use, and (on some models) vision input.
+
+
+        **Streaming:** set `stream: true` and `stream_options: { include_usage: true }`
+
+        to receive token-by-token deltas. The final chunk (the one with `finish_reason`
+
+        set) carries the `usage` block; you need it for accurate cost tracking.'
+      operationId: createChatCompletion
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ChatCompletionRequest'
+              type: object
+              required:
+              - model
+              - messages
+              properties:
+                model:
+                  type: string
+                  description: Model id. See `GET /v1/models` for available models.
+                  example: Meta-Llama-3.1-8B-Instruct-FP8
+                messages:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                    - role
+                    properties:
+                      role:
+                        type: string
+                        enum:
+                        - system
+                        - user
+                        - assistant
+                        - tool
+                      content:
+                        oneOf:
+                        - type: string
+                        - type: array
+                          items:
+                            type: object
+                      name:
+                        type: string
+                      tool_calls:
+                        type: array
+                        items:
+                          type: object
+                      tool_call_id:
+                        type: string
+                stream:
+                  type: boolean
+                  default: false
+                stream_options:
+                  type: object
+                  properties:
+                    include_usage:
+                      type: boolean
+                      description: Required for per-request spend tracking when streaming.
+                temperature:
+                  type: number
+                  minimum: 0
+                  maximum: 2
+                  default: 1
+                top_p:
+                  type: number
+                  minimum: 0
+                  maximum: 1
+                max_tokens:
+                  type: integer
+                  minimum: 1
+                tools:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                    - type
+                    - function
+                    properties:
+                      type:
+                        type: string
+                        enum:
+                        - function
+                      function:
+                        type: object
+                        required:
+                        - name
+                        properties:
+                          name:
+                            type: string
+                          description:
+                            type: string
+                          parameters:
+                            type: object
+                tool_choice:
+                  oneOf:
+                  - type: string
+                    enum:
+                    - none
+                    - auto
+                    - required
+                  - type: object
+                response_format:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      enum:
+                      - text
+                      - json_object
+                seed:
+                  type: integer
+                stop:
+                  oneOf:
+                  - type: string
+                  - type: array
+                    items:
+                      type: string
+                user:
+                  type: string
+                max_completion_tokens:
+                  type: integer
+                  minimum: 1
+                  description: 'Newer name for max_tokens; either is honored as-is. Non-streaming requests that set neither default to 2048 output tokens on non-reasoning models (the response then carries `x-flexai-max-tokens-defaulted: 2048`); reasoning models get no default and are bounded by the non-streaming time budget instead.'
+                reasoning_effort:
+                  type: string
+                  enum:
+                  - none
+                  - minimal
+                  - low
+                  - medium
+                  - high
+                  - xhigh
+                  - max
+                  description: 'Accepted values differ by model. Models with a depth dial take the five gateway levels minimal, low, medium, high, max and return 400 for any other value, including none and xhigh: gpt-oss-120b/gpt-oss-20b accept low, medium, high only; DeepSeek-V4-Flash-0731 accepts all five (only minimal keeps it off; low, medium and high select the model''s high effort level, with low and medium reported as x-flexai-adjusted-params: reasoning_effort=high; max selects its maximum). A word that is no effort level at all is a 400 on every reasoning model; a model with no reasoning at all drops the parameter and reports x-flexai-dropped-params. Models with a reasoning on/off switch but no depth dial (gemma-4-31b-it, gemma-4-26B-A4B-it, Qwen3.5-9B, Qwen3.6-27B-FP8, Qwen3.6-35B-A3B-FP8, GLM-4.5-Air-FP8, Qwen3-8B-FP8, NVIDIA-Nemotron-3.5-Lightning-30B-A3B) take all seven values: low, medium, high, xhigh and max turn reasoning on at the model''s own depth and the response carries x-flexai-adjusted-params: reasoning_effort=on; none and minimal leave it off. An explicit thinking or chat_template_kwargs.enable_thinking switch wins over a contradicting effort, which is then reported in x-flexai-dropped-params. Reasoning is off by default on every model with an on/off switch; thinking {type: enabled} (or OpenRouter reasoning) turns it on everywhere.'
+                thinking:
+                  type: object
+                  description: On/off switch for reasoning on reasoning-capable models; takes precedence over reasoning_effort. disabled turns reasoning off even if reasoning_effort is sent; enabled alone turns it on at the model's default depth. Omitting both reasoning_effort and thinking leaves reasoning off on every switchable model. On a model that cannot stop reasoning (gpt-oss-120b, gpt-oss-20b and the always-thinking models) disabled is a 400 naming thinking, never a silent 200.
+                  required:
+                  - type
+                  properties:
+                    type:
+                      type: string
+                      enum:
+                      - enabled
+                      - disabled
+                    budget_tokens:
+                      type: integer
+                      minimum: 1
       responses:
         '200':
-          description: A chat completion (or an SSE stream when stream=true)
+          description: 'Successful response. When `stream: true`, body is an SSE stream of `text/event-stream` chunks.'
+          headers:
+            x-flexai-max-tokens-defaulted:
+              schema:
+                type: integer
+              description: 'Present only when the request set neither `max_tokens` nor
+
+                `max_completion_tokens` and the gateway injected its default
+
+                output ceiling; the value is the ceiling applied. Only
+
+                non-streaming requests on non-reasoning models get the default,
+
+                so a reasoning model never carries this header.
+
+                '
+            x-flexai-max-tokens-clamped:
+              schema:
+                type: integer
+              description: 'Present only when the gateway lowered the request''s output
+
+                ceiling; the value is the ceiling applied. Reserved: no request
+
+                is clamped today. A STREAMED response the gateway ended early
+
+                (the model was repeating itself, or it reached the token
+
+                ceiling while repeating) is marked on its terminal chunks
+
+                instead, since its headers are already on the wire:
+
+                `finish_reason: "length"` plus `flexai_stopped: "degeneration"`
+
+                or `"ceiling"` (on `/v1/responses`, a `response.incomplete`
+
+                event with `incomplete_details.reason: "max_output_tokens"` and
+
+                the same field on the response object).
+
+                '
+            x-flexai-empty-at-length:
+              schema:
+                type: string
+                enum:
+                - 'true'
+              description: 'Present only on a non-streaming response whose first choice
+
+                ended with `finish_reason: "length"` and no visible content, no
+
+                `tool_calls` and no `function_call` — the model was cut off,
+
+                not incapable. Retry with a larger `max_tokens` or stream.
+
+                Never set on a streamed response: its headers are sent before
+
+                the terminal chunk exists.
+
+                '
+            x-flexai-dropped-params:
+              schema:
+                type: string
+              description: 'Present only when the gateway removed a request parameter the
+
+                model cannot use rather than rejecting the request; a
+
+                comma-separated list of the parameter names: `reasoning_effort`
+
+                on a model with no reasoning at all (or with an on/off switch
+
+                that the request also turned off), and `thinking` (or
+
+                `reasoning`, the OpenRouter dialect) on a model with no reasoning
+
+                switch, and `parallel_tool_calls` when a `tool_choice: "required"`
+
+                request sent `true` to a model the gateway bounds to one tool
+
+                call (`GLM-5.2`, `MiniMax-M2.7`,
+
+                `NVIDIA-Nemotron-3.5-Lightning-30B-A3B`), where it is forced to
+
+                `false`. A malformed value is a `400` on every model; only a
+
+                well-formed one the model cannot honour is dropped.
+
+                '
+            x-flexai-adjusted-params:
+              schema:
+                type: string
+              description: 'Present only when the gateway honoured a request parameter at
+
+                the nearest level the model supports rather than exactly; a
+
+                comma-separated list of `name=value`. Two cases today.
+
+                `reasoning_effort=on` (`reasoning=on` when sent as OpenRouter''s
+
+                `reasoning.effort` or on `/v1/responses`): the model has a
+
+                reasoning on/off switch but no depth setting, so any effort from
+
+                `low` to `max` turns reasoning on at the model''s own depth.
+
+                `none` and `minimal` turn it off and carry no header.
+
+                `reasoning_effort=high` (`reasoning=high` in the same spellings):
+
+                the model has two depths (`DeepSeek-V4-Flash-0731`), so a `low`
+
+                or `medium` was rounded up to its high level rather than
+
+                turning reasoning off, or a `minimal` was floored to it because
+
+                `thinking: {"type": "enabled"}` was also sent. `high`, `max` and
+
+                a bare `minimal` carry no header.
+
+                '
+            x-flexai-sampling-defaulted:
+              schema:
+                type: string
+              description: 'Present only when the gateway filled one or more sampling fields
+
+                from the model''s catalog `sampling_defaults` because the request
+
+                left them unset (absent or `null`); a comma-separated list of the
+
+                field names, e.g. `top_p`. A value the caller sent, including
+
+                `temperature: 0`, is never replaced. No header means nothing was
+
+                filled.
+
+                '
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ChatCompletion'
+                type: object
+                required:
+                - id
+                - object
+                - created
+                - model
+                - choices
+                properties:
+                  id:
+                    type: string
+                  object:
+                    type: string
+                    enum:
+                    - chat.completion
+                  created:
+                    type: integer
+                  model:
+                    type: string
+                  choices:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                      - index
+                      - message
+                      - finish_reason
+                      properties:
+                        index:
+                          type: integer
+                        message:
+                          type: object
+                          properties:
+                            role:
+                              type: string
+                            content:
+                              type:
+                              - string
+                              - 'null'
+                            reasoning_content:
+                              type:
+                              - string
+                              - 'null'
+                              description: Reasoning text when reasoning is enabled on a reasoning-capable model; absent or null otherwise.
+                            tool_calls:
+                              type: array
+                              items:
+                                type: object
+                        finish_reason:
+                          type: string
+                          enum:
+                          - stop
+                          - length
+                          - tool_calls
+                          - content_filter
+                  usage:
+                    type: object
+                    properties:
+                      prompt_tokens:
+                        type: integer
+                      completion_tokens:
+                        type: integer
+                      total_tokens:
+                        type: integer
+                      completion_tokens_details:
+                        type: object
+                        description: 'Present when the model reasoned. reasoning_tokens are part of completion_tokens and billed as output; text_tokens is the visible-content remainder (live example: reasoning_tokens 78, text_tokens 2).'
+                        properties:
+                          reasoning_tokens:
+                            type: integer
+                          text_tokens:
+                            type: integer
+                      cache_read_input_tokens:
+                        type: integer
+                      cache_creation_input_tokens:
+                        type: integer
+                      cost:
+                        type: number
+                        description: 'FlexAI extension. Our charge for this request in USD, rounded
+
+                          to 8 decimal places: what we bill you, not an upstream
+
+                          provider''s cost. Equals
+
+                          `cost_details.upstream_inference_prompt_cost` +
+
+                          `cost_details.upstream_inference_completions_cost`. Present on
+
+                          non-streaming responses and on the final streamed chunk''s
+
+                          `usage` (with `stream_options.include_usage`). Absent when the
+
+                          response cannot state the charge; the request is still billed,
+
+                          and `/v1/flex/usage/request/{request_id}` returns the recorded
+
+                          figure. Rates are published at `GET /v1/pricing`.
+
+                          '
+                      cost_details:
+                        type: object
+                        description: 'FlexAI extension. The parts of `cost`. Field names follow
+
+                          OpenRouter''s usage-accounting fields for compatibility; the
+
+                          values are still our charge to you, not a provider''s cost.
+
+                          '
+                        additionalProperties: false
+                        properties:
+                          upstream_inference_prompt_cost:
+                            type: number
+                            description: The input-token part of `cost`, in USD (cached-input rate for tokens served from the prompt cache).
+                          upstream_inference_completions_cost:
+                            type: number
+                            description: The output-token part of `cost`, in USD, reasoning tokens included.
+            text/event-stream:
+              schema:
+                type: string
+                description: 'SSE stream. Each event is `data: <json>`. Terminates with `data: [DONE]`.'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '429':
-          $ref: '#/components/responses/TooManyRequests'
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
 components:
+  responses:
+    ServerError:
+      description: Upstream or gateway error. Safe to surface `error.message` to users.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found (e.g., unknown model or job id).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BadRequest:
+      description: Invalid request — malformed body, unknown model, or schema violation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Missing or invalid API key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    PaymentRequired:
+      description: Key budget exhausted — add credit in the dashboard to continue.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    RateLimited:
+      description: 'Per-key RPM exceeded. Response includes `Retry-After` and
+
+        `x-ratelimit-*` headers.
+
+        '
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds until the next window.
+        x-ratelimit-limit-requests:
+          schema:
+            type: integer
+        x-ratelimit-remaining-requests:
+          schema:
+            type: integer
+        x-ratelimit-reset-requests:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
   schemas:
-    ChatCompletionRequest:
+    Error:
       type: object
       required:
-      - model
-      - messages
-      properties:
-        model:
-          type: string
-          description: Model id from the /models catalog.
-        messages:
-          type: array
-          items:
-            $ref: '#/components/schemas/ChatMessage'
-        temperature:
-          type: number
-        top_p:
-          type: number
-        stop:
-          oneOf:
-          - type: string
-          - type: array
-            items:
-              type: string
-        seed:
-          type: integer
-        user:
-          type: string
-        max_tokens:
-          type: integer
-          description: Non-streaming responses are capped at 2048 output tokens regardless of this value.
-        stream:
-          type: boolean
-        stream_options:
-          type: object
-          properties:
-            include_usage:
-              type: boolean
-        tools:
-          type: array
-          items:
-            type: object
-        tool_choice:
-          oneOf:
-          - type: string
-          - type: object
-        response_format:
-          type: object
-        presence_penalty:
-          type: number
-        frequency_penalty:
-          type: number
-    ChatMessage:
-      type: object
-      required:
-      - role
-      - content
-      properties:
-        role:
-          type: string
-          enum:
-          - system
-          - user
-          - assistant
-          - tool
-        content:
-          type: string
-        name:
-          type: string
-    ChatCompletion:
-      type: object
-      properties:
-        id:
-          type: string
-        object:
-          type: string
-          example: chat.completion
-        created:
-          type: integer
-        model:
-          type: string
-        choices:
-          type: array
-          items:
-            type: object
-            properties:
-              index:
-                type: integer
-              message:
-                $ref: '#/components/schemas/ChatMessage'
-              finish_reason:
-                type: string
-                enum:
-                - stop
-                - length
-                - tool_calls
-                - content_filter
-        usage:
-          type: object
-          properties:
-            prompt_tokens:
-              type: integer
-            completion_tokens:
-              type: integer
-            total_tokens:
-              type: integer
-    ErrorResponse:
-      type: object
+      - error
       properties:
         error:
           type: object
+          required:
+          - message
+          - type
           properties:
             message:
               type: string
             type:
               type: string
-            param:
-              type:
-              - string
-              - 'null'
+              example: invalid_request_error
             code:
               type: string
+              description: 'Stable machine-readable code for the failure. Present on
+
+                most error paths; OMITTED on FastAPI default-validation
+
+                bodies. Do not assume always present.
+
+                '
             doc_url:
               type: string
-  responses:
-    BadRequest:
-      description: Request validation failure. The error object includes a `param` field indicating the offending path (OpenAI-compatible error envelope).
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    TooManyRequests:
-      description: Account-level rate limit or budget exceeded. Includes `Retry-After` and `x-ratelimit-*` response headers.
-      headers:
-        Retry-After:
-          schema:
-            type: integer
-          description: Seconds to wait before retrying.
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    Unauthorized:
-      description: Invalid or missing API key (error code `authentication_error`; includes a `doc_url` extension pointing at the auth docs).
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
+              format: uri
+              description: 'FlexAI extension. Link to the relevant dashboard / docs
+
+                page for the failure mode (e.g. invalid key → /dashboard/keys).
+
+                Present on auth and quota errors.
+
+                '
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
-      description: 'FlexAI API key passed as a bearer token: `Authorization: Bearer $FLEXAI_API_KEY`. Create a key at https://tokens.flex.ai/signup.'
+      bearerFormat: sk-xxxx
+      description: 'Virtual API key. Create one from the
+
+        [FlexAI dashboard](https://platform.flex.ai/dashboard/keys). Pass as
+
+        `Authorization: Bearer sk-xxxx`.
+
+        '

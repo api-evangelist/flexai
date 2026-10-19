@@ -1,0 +1,588 @@
+openapi: 3.2.0
+info:
+  title: FlexAI Inference Usage API
+  version: 1.0.0
+  description: 'OpenAI-compatible inference API for text, code, reasoning, vision, and
+
+    embedding models hosted by FlexAI. Use any OpenAI SDK by pointing the
+
+    `base_url` at this service.'
+  contact:
+    name: FlexAI Support
+    email: support@flex.ai
+    url: https://docs.flex.ai/inference-api/overview
+servers:
+- url: https://api.flex.ai
+  description: Production (US)
+- url: https://eu.api.flex.ai
+  description: Production (EU)
+security:
+- bearerAuth: []
+tags:
+- name: Usage
+  description: Programmatic spend and quota for the calling key.
+paths:
+  /v1/flex/usage:
+    get:
+      tags:
+      - Usage
+      summary: Programmatic spend for the calling key
+      description: 'FlexAI-specific shape (intentionally not OpenAI''s `/v1/organization/usage/*`
+
+        — that surface requires org/team scoping which FlexAI does not yet model).
+
+        Returns total spend, total tokens, per-model breakdown, and a daily
+
+        history for the API key in the `Authorization` header. Cached per-key
+
+        for 60 seconds.
+
+
+        `total_spend` is the sum of the charges applied to your account for the
+
+        requests in the window, so it matches your invoice for that period
+
+        exactly. Note that it is not recoverable from `total_tokens` and the
+
+        published per-token rates: a cached prompt is billed at the lower cached
+
+        rate, so a token-based re-derivation will read high. Group by
+
+        `canonical_model` to reconcile per model.'
+      operationId: getUsage
+      parameters:
+      - name: days
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 90
+          default: 30
+        description: 'Number of trailing days to include in `daily`. Capped at 90, the
+
+          period for which per-key billed spend is retained.
+
+          '
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - object
+                - currency
+                - total_spend
+                - total_tokens
+                - total_requests
+                - by_model
+                - daily
+                - generated_at
+                properties:
+                  object:
+                    type: string
+                    enum:
+                    - usage
+                  currency:
+                    type: string
+                    enum:
+                    - USD
+                  total_spend:
+                    type: number
+                  total_tokens:
+                    type: integer
+                  total_requests:
+                    type: integer
+                  by_model:
+                    type: array
+                    description: 'Per-model spend rows. Group by `canonical_model`+`modality`
+
+                      for reconciliation: `canonical_model` is the stable catalog
+
+                      id (the same id `/v1/pricing` and `/v1/models` use), whereas
+
+                      `model` equals `canonical_model`: the internal served
+
+                      routing id is not exposed. One row per `canonical_model` and
+
+                      modality: forms of the same model the ledger recorded under
+
+                      different raw ids are merged. Multi-modality models appear once per
+
+                      modality (image+image_edit, etc.). Text rows have
+
+                      `modality=text`, `units_consumed=null`, `billing_unit=tokens`.
+
+                      '
+                    items:
+                      type: object
+                      required:
+                      - model
+                      - canonical_model
+                      - modality
+                      - requests
+                      - total_tokens
+                      - billing_unit
+                      - total_spend
+                      properties:
+                        model:
+                          type: string
+                          description: 'The catalog model id, equal to `canonical_model` (earlier
+
+                            releases returned the internal served routing id here).
+
+                            '
+                        canonical_model:
+                          type: string
+                          description: 'Stable catalog model id — matches the `model` field of
+
+                            `/v1/pricing` and `/v1/models`. Use this (with
+
+                            `modality`) as the reconciliation key.
+
+                            '
+                        modality:
+                          type: string
+                          enum:
+                          - text
+                          - image
+                          - image_edit
+                          - video
+                          - audio
+                          - tts
+                          - stt
+                        requests:
+                          type: integer
+                        total_tokens:
+                          type: integer
+                        units_consumed:
+                          type: number
+                          nullable: true
+                        billing_unit:
+                          type: string
+                        total_spend:
+                          type: number
+                  daily:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                      - date
+                      - requests
+                      - total_tokens
+                      - total_spend
+                      properties:
+                        date:
+                          type: string
+                          format: date
+                        requests:
+                          type: integer
+                        total_tokens:
+                          type: integer
+                        total_spend:
+                          type: number
+                  generated_at:
+                    type: string
+                    format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          description: '`?days` outside the [1, 365] range. Returns FastAPI''s default
+
+            validation envelope (not the OpenAI shape used elsewhere on
+
+            this route). SDK clients should clamp client-side.
+
+            '
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: array
+                    items:
+                      type: object
+        '503':
+          description: Authentication service temporarily unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '504':
+          description: Usage query timed out. Retry shortly.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/flex/usage/request/{request_id}:
+    get:
+      tags:
+      - Usage
+      summary: Usage and cost for a single request
+      description: 'Looks up one request''s usage row for exact per-request cost
+
+        attribution — the per-turn complement to the whole-key aggregate
+
+        `/v1/flex/usage` returns.
+
+
+        `request_id` is the value of the `x-litellm-call-id` response header
+
+        on the original inference call (**not** the `id` field in the
+
+        response body). Capture that header per call, then join it here.
+
+
+        The lookup is scoped to the calling key: a request made with a
+
+        different key returns the same `404` as an id that does not exist.
+
+        Rows are written when a request completes, so a lookup immediately
+
+        after the call may briefly `404` — retry after a few seconds.
+
+
+        `total_spend` is the charge applied to your account for this request —
+
+        the same figure the `/v1/flex/usage` aggregates sum, so per-request values
+
+        reconcile against those totals exactly. It is not derived from the token
+
+        counts returned alongside it: a cached prompt is billed at the lower cached
+
+        rate, so a token-based re-derivation reads high.
+
+
+        A request whose billing has not been written yet reports `0.0` rather than
+
+        an estimate; billing settles within seconds, so retry if you need the final
+
+        figure immediately after the call. Only LiteLLM-routed (text) requests carry
+
+        a call id, so rows always have `modality=text`.'
+      operationId: getUsageRequest
+      parameters:
+      - name: request_id
+        in: path
+        required: true
+        schema:
+          type: string
+        description: The `x-litellm-call-id` header value from the original response.
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - object
+                - currency
+                - request_id
+                - model
+                - canonical_model
+                - status
+                - prompt_tokens
+                - completion_tokens
+                - total_tokens
+                - total_spend
+                - modality
+                - billing_unit
+                - started_at
+                - ended_at
+                - generated_at
+                properties:
+                  object:
+                    type: string
+                    enum:
+                    - usage.request
+                  currency:
+                    type: string
+                    enum:
+                    - USD
+                  request_id:
+                    type: string
+                  model:
+                    type: string
+                    description: The catalog model id, equal to `canonical_model` (earlier releases returned the internal served routing id).
+                  canonical_model:
+                    type: string
+                    description: Stable catalog id; use this to group and reconcile per-model.
+                  status:
+                    type: string
+                    description: '`success`, `failure`, or `unknown`. Failed requests
+
+                      typically report zero tokens and $0 spend.
+
+                      '
+                  prompt_tokens:
+                    type: integer
+                  completion_tokens:
+                    type: integer
+                  total_tokens:
+                    type: integer
+                  total_spend:
+                    type: number
+                  cached_tokens:
+                    type: integer
+                    nullable: true
+                    description: 'How many of `prompt_tokens` were served from the prompt cache.
+
+                      Cached tokens bill at a lower rate, so this is what explains a
+
+                      `total_spend` below what `prompt_tokens` and the published
+
+                      per-token price would suggest — the two are not meant to agree
+
+                      on a cache-heavy request.
+
+
+                      `null` means billing has not written this request yet (the same
+
+                      window in which `total_spend` is `0.0`), which is different from
+
+                      a request that had no cache hits — that reports `0`.
+
+                      '
+                  modality:
+                    type: string
+                    enum:
+                    - text
+                  units_consumed:
+                    type: number
+                    nullable: true
+                  billing_unit:
+                    type: string
+                  started_at:
+                    type: string
+                    format: date-time
+                  ended_at:
+                    type: string
+                    format: date-time
+                  generated_at:
+                    type: string
+                    format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: 'No request with this id is visible to this key — unknown id, a
+
+            request made with a different key, or a row not yet written.
+
+            '
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '503':
+          description: Authentication service temporarily unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '504':
+          description: Usage query timed out. Retry shortly.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /v1/flex/key:
+    get:
+      tags:
+      - Usage
+      summary: Limits and remaining credit for the calling key
+      description: 'Returns the calling key''s configured limits and credit state: rate
+
+        limits (RPM/TPM), cumulative spend, budget ceiling, and remaining
+
+        budget — so a client can distinguish "the model is unhealthy" from
+
+        "I''m rate-limited / out of credits" without admin access. The key in
+
+        the `Authorization` header sees only itself.
+
+
+        This endpoint is **budget-exempt**: it keeps answering when the key is
+
+        out of credits (that is exactly when you need it). Inference endpoints
+
+        remain fully budget-gated.
+
+
+        `remaining_budget_usd` is the same value the gateway''s 402
+
+        `insufficient_balance` check enforces, floored at 0. `rate_limit`
+
+        reports the key''s *configured* limits — the same values the
+
+        `x-ratelimit-*` headers on inference responses advertise; for live
+
+        headroom in the current window, read
+
+        `x-ratelimit-api_key-remaining-requests` from a successful
+
+        non-streaming response (or `x-ratelimit-remaining-requests` from a
+
+        429).'
+      operationId: getKey
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - object
+                - currency
+                - key_name
+                - spend_usd
+                - max_budget_usd
+                - remaining_budget_usd
+                - rate_limit
+                - expires_at
+                - generated_at
+                properties:
+                  object:
+                    type: string
+                    enum:
+                    - key
+                  currency:
+                    type: string
+                    enum:
+                    - USD
+                  key_name:
+                    type: string
+                    nullable: true
+                    description: Masked display name ("sk-...abcd"); never the full key.
+                  spend_usd:
+                    type: number
+                  max_budget_usd:
+                    type: number
+                    nullable: true
+                    description: Budget ceiling for this key; null when no per-key ceiling is configured.
+                  remaining_budget_usd:
+                    type: number
+                    nullable: true
+                    description: max_budget_usd - spend_usd, floored at 0; null when max_budget_usd is null.
+                  rate_limit:
+                    type: object
+                    required:
+                    - rpm
+                    - tpm
+                    properties:
+                      rpm:
+                        type: integer
+                        nullable: true
+                        description: Requests per minute; null when no per-key limit is configured.
+                      tpm:
+                        type: integer
+                        nullable: true
+                        description: Tokens per minute; null when no per-key limit is configured.
+                  expires_at:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    description: When this key expires; null means it never expires.
+                  generated_at:
+                    type: string
+                    format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: The key is blocked.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '502':
+          description: Upstream authentication service unavailable. Retry shortly.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  responses:
+    Unauthorized:
+      description: Missing or invalid API key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    RateLimited:
+      description: 'Per-key RPM exceeded. Response includes `Retry-After` and
+
+        `x-ratelimit-*` headers.
+
+        '
+      headers:
+        Retry-After:
+          schema:
+            type: integer
+          description: Seconds until the next window.
+        x-ratelimit-limit-requests:
+          schema:
+            type: integer
+        x-ratelimit-remaining-requests:
+          schema:
+            type: integer
+        x-ratelimit-reset-requests:
+          schema:
+            type: integer
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Error:
+      type: object
+      required:
+      - error
+      properties:
+        error:
+          type: object
+          required:
+          - message
+          - type
+          properties:
+            message:
+              type: string
+            type:
+              type: string
+              example: invalid_request_error
+            code:
+              type: string
+              description: 'Stable machine-readable code for the failure. Present on
+
+                most error paths; OMITTED on FastAPI default-validation
+
+                bodies. Do not assume always present.
+
+                '
+            doc_url:
+              type: string
+              format: uri
+              description: 'FlexAI extension. Link to the relevant dashboard / docs
+
+                page for the failure mode (e.g. invalid key → /dashboard/keys).
+
+                Present on auth and quota errors.
+
+                '
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: sk-xxxx
+      description: 'Virtual API key. Create one from the
+
+        [FlexAI dashboard](https://platform.flex.ai/dashboard/keys). Pass as
+
+        `Authorization: Bearer sk-xxxx`.
+
+        '

@@ -84,24 +84,6 @@ maintainers:
 - FN: APIs.json
   email: info@apis.io
 apis:
-- aid: flexai:flexai-audio-api
-  name: FlexAI Audio API
-  description: Speech-to-text and text-to-speech
-  humanURL: https://docs.flex.ai/inference-api/overview
-  baseURL: https://tokens.flex.ai/v1
-  tags:
-  - Audio
-  properties:
-  - type: OpenAPI
-    url: openapi/flexai-audio-api-openapi.yml
-  - type: Documentation
-    url: https://docs.flex.ai
-  - type: APIReference
-    url: https://docs.flex.ai/inference-api/reference/openai-compatibility
-  - type: GettingStarted
-    url: https://docs.flex.ai/inference-api/quickstart
-  - type: Authentication
-    url: authentication/flexai-authentication.yml
 - aid: flexai:flexai-completions-api
   name: FlexAI Completions API
   description: Legacy text completions
@@ -138,26 +120,6 @@ apis:
     url: https://docs.flex.ai/inference-api/quickstart
   - type: Authentication
     url: authentication/flexai-authentication.yml
-- aid: flexai:flexai-images-api
-  name: FlexAI Images API
-  description: Image generation
-  humanURL: https://docs.flex.ai/inference-api/overview
-  baseURL: https://tokens.flex.ai/v1
-  tags:
-  - Image
-  tags_raw:
-  - Images
-  properties:
-  - type: OpenAPI
-    url: openapi/flexai-images-api-openapi.yml
-  - type: Documentation
-    url: https://docs.flex.ai
-  - type: APIReference
-    url: https://docs.flex.ai/inference-api/reference/openai-compatibility
-  - type: GettingStarted
-    url: https://docs.flex.ai/inference-api/quickstart
-  - type: Authentication
-    url: authentication/flexai-authentication.yml
 - aid: flexai:flexai-models-api
   name: FlexAI Models API
   description: Model catalog
@@ -176,16 +138,16 @@ apis:
     url: https://docs.flex.ai/inference-api/quickstart
   - type: Authentication
     url: authentication/flexai-authentication.yml
-- aid: flexai:flexai-video-api
-  name: FlexAI Video API
-  description: Video generation
+- aid: flexai:flexai-usage-api
+  name: FlexAI Usage API
+  description: Programmatic spend and quota for the calling key.
   humanURL: https://docs.flex.ai/inference-api/overview
   baseURL: https://tokens.flex.ai/v1
   tags:
-  - Video
+  - Usage
   properties:
   - type: OpenAPI
-    url: openapi/flexai-video-api-openapi.yml
+    url: openapi/flexai-usage-api-openapi.yml
   - type: Documentation
     url: https://docs.flex.ai
   - type: APIReference
@@ -196,7 +158,7 @@ apis:
     url: authentication/flexai-authentication.yml
 - aid: flexai:flexai-chat-completions-api
   name: FlexAI Chat Completions API
-  description: Chat completions
+  description: Chat completions (streaming, tool use, vision).
   humanURL: https://docs.flex.ai/inference-api/overview
   baseURL: https://tokens.flex.ai/v1
   tags:

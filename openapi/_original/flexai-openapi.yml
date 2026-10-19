@@ -1,0 +1,1387 @@
+openapi: 3.1.0
+info:
+  title: FlexAI Inference API
+  version: "1.0.0"
+  description: |
+    OpenAI-compatible inference API for text, code, reasoning, vision, and
+    embedding models hosted by FlexAI. Use any OpenAI SDK by pointing the
+    `base_url` at this service.
+  contact:
+    name: FlexAI Support
+    email: support@flex.ai
+    url: https://docs.flex.ai/inference-api/overview
+servers:
+  - url: https://api.flex.ai
+    description: Production (US)
+  # The EU regional stack. It is a separate deployment, not a mirror: a key is
+  # only valid against its own region's host, and the catalogue the EU endpoint
+  # serves is narrower than the US one (capacity plus EU licensing). Listed
+  # after the US host because a workspace is `us` unless it was deliberately
+  # created in the EU, so the US host is the right default for a generated SDK.
+  # See docs/content/reference/regions.mdx.
+  - url: https://eu.api.flex.ai
+    description: Production (EU)
+  # Only hosts that serve the WHOLE /v1 surface belong here. platform.flex.ai
+  # does not: its routes are /api/* plus an Exact match on /v1/models, and every
+  # other path falls through to the SPA catch-all - GET answers 200 with HTML,
+  # POST answers 405, also HTML.
+  # A generated client pointed there gets a web page back from chat/completions.
+  # It was briefly listed here on a live check that happened to probe /v1/models,
+  # the single exception — so probe a path with a body before adding a host.
+  # Keeping it out also preserves the origin split the infra deliberately made:
+  # a machine API has no reason to share an origin with the browser session
+  # cookie, and platform.flex.ai carries no edge rate limit.
+security:
+  - bearerAuth: []
+tags:
+  - name: Chat
+    description: Chat completions (streaming, tool use, vision).
+  - name: Completions
+    description: Legacy text completions.
+  - name: Embeddings
+    description: Generate vector embeddings for text.
+  - name: Models
+    description: Discover available models.
+  - name: Usage
+    description: Programmatic spend and quota for the calling key.
+
+paths:
+  /v1/chat/completions:
+    post:
+      tags: [Chat]
+      summary: Create a chat completion
+      description: |
+        Given a list of messages, returns a model-generated response. Supports
+        streaming (SSE), tool use, and (on some models) vision input.
+
+        **Streaming:** set `stream: true` and `stream_options: { include_usage: true }`
+        to receive token-by-token deltas. The final chunk (the one with `finish_reason`
+        set) carries the `usage` block; you need it for accurate cost tracking.
+      operationId: createChatCompletion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [model, messages]
+              properties:
+                model:
+                  type: string
+                  description: Model id. See `GET /v1/models` for available models.
+                  example: Meta-Llama-3.1-8B-Instruct-FP8
+                messages:
+                  type: array
+                  items:
+                    type: object
+                    required: [role]
+                    properties:
+                      role:
+                        type: string
+                        enum: [system, user, assistant, tool]
+                      content:
+                        oneOf:
+                          - type: string
+                          - type: array
+                            items:
+                              type: object
+                      name:
+                        type: string
+                      tool_calls:
+                        type: array
+                        items:
+                          type: object
+                      tool_call_id:
+                        type: string
+                stream:
+                  type: boolean
+                  default: false
+                stream_options:
+                  type: object
+                  properties:
+                    include_usage:
+                      type: boolean
+                      description: Required for per-request spend tracking when streaming.
+                temperature:
+                  type: number
+                  minimum: 0
+                  maximum: 2
+                  default: 1
+                top_p:
+                  type: number
+                  minimum: 0
+                  maximum: 1
+                max_tokens:
+                  type: integer
+                  minimum: 1
+                tools:
+                  type: array
+                  items:
+                    type: object
+                    required: [type, function]
+                    properties:
+                      type:
+                        type: string
+                        enum: [function]
+                      function:
+                        type: object
+                        required: [name]
+                        properties:
+                          name:
+                            type: string
+                          description:
+                            type: string
+                          parameters:
+                            type: object
+                tool_choice:
+                  oneOf:
+                    - type: string
+                      enum: [none, auto, required]
+                    - type: object
+                response_format:
+                  type: object
+                  properties:
+                    type:
+                      type: string
+                      enum: [text, json_object]
+                seed:
+                  type: integer
+                stop:
+                  oneOf:
+                    - type: string
+                    - type: array
+                      items:
+                        type: string
+                user:
+                  type: string
+                max_completion_tokens:
+                  type: integer
+                  minimum: 1
+                  description: "Newer name for max_tokens; either is honored as-is. Non-streaming requests that set neither default to 2048 output tokens on non-reasoning models (the response then carries `x-flexai-max-tokens-defaulted: 2048`); reasoning models get no default and are bounded by the non-streaming time budget instead."
+                reasoning_effort:
+                  type: string
+                  enum: [none, minimal, low, medium, high, xhigh, max]
+                  description: "Accepted values differ by model. Models with a depth dial take the five gateway levels minimal, low, medium, high, max and return 400 for any other value, including none and xhigh: gpt-oss-120b/gpt-oss-20b accept low, medium, high only; DeepSeek-V4-Flash-0731 accepts all five (only minimal keeps it off; low, medium and high select the model's high effort level, with low and medium reported as x-flexai-adjusted-params: reasoning_effort=high; max selects its maximum). A word that is no effort level at all is a 400 on every reasoning model; a model with no reasoning at all drops the parameter and reports x-flexai-dropped-params. Models with a reasoning on/off switch but no depth dial (gemma-4-31b-it, gemma-4-26B-A4B-it, Qwen3.5-9B, Qwen3.6-27B-FP8, Qwen3.6-35B-A3B-FP8, GLM-4.5-Air-FP8, Qwen3-8B-FP8, NVIDIA-Nemotron-3.5-Lightning-30B-A3B) take all seven values: low, medium, high, xhigh and max turn reasoning on at the model's own depth and the response carries x-flexai-adjusted-params: reasoning_effort=on; none and minimal leave it off. An explicit thinking or chat_template_kwargs.enable_thinking switch wins over a contradicting effort, which is then reported in x-flexai-dropped-params. Reasoning is off by default on every model with an on/off switch; thinking {type: enabled} (or OpenRouter reasoning) turns it on everywhere."
+                thinking:
+                  type: object
+                  description: "On/off switch for reasoning on reasoning-capable models; takes precedence over reasoning_effort. disabled turns reasoning off even if reasoning_effort is sent; enabled alone turns it on at the model's default depth. Omitting both reasoning_effort and thinking leaves reasoning off on every switchable model. On a model that cannot stop reasoning (gpt-oss-120b, gpt-oss-20b and the always-thinking models) disabled is a 400 naming thinking, never a silent 200."
+                  required: [type]
+                  properties:
+                    type:
+                      type: string
+                      enum: [enabled, disabled]
+                    budget_tokens:
+                      type: integer
+                      minimum: 1
+      responses:
+        "200":
+          description: "Successful response. When `stream: true`, body is an SSE stream of `text/event-stream` chunks."
+          headers:
+            x-flexai-max-tokens-defaulted:
+              schema: { type: integer }
+              description: |
+                Present only when the request set neither `max_tokens` nor
+                `max_completion_tokens` and the gateway injected its default
+                output ceiling; the value is the ceiling applied. Only
+                non-streaming requests on non-reasoning models get the default,
+                so a reasoning model never carries this header.
+            x-flexai-max-tokens-clamped:
+              schema: { type: integer }
+              description: |
+                Present only when the gateway lowered the request's output
+                ceiling; the value is the ceiling applied. Reserved: no request
+                is clamped today. A STREAMED response the gateway ended early
+                (the model was repeating itself, or it reached the token
+                ceiling while repeating) is marked on its terminal chunks
+                instead, since its headers are already on the wire:
+                `finish_reason: "length"` plus `flexai_stopped: "degeneration"`
+                or `"ceiling"` (on `/v1/responses`, a `response.incomplete`
+                event with `incomplete_details.reason: "max_output_tokens"` and
+                the same field on the response object).
+            x-flexai-empty-at-length:
+              schema: { type: string, enum: ["true"] }
+              description: |
+                Present only on a non-streaming response whose first choice
+                ended with `finish_reason: "length"` and no visible content, no
+                `tool_calls` and no `function_call` — the model was cut off,
+                not incapable. Retry with a larger `max_tokens` or stream.
+                Never set on a streamed response: its headers are sent before
+                the terminal chunk exists.
+            x-flexai-dropped-params:
+              schema: { type: string }
+              description: |
+                Present only when the gateway removed a request parameter the
+                model cannot use rather than rejecting the request; a
+                comma-separated list of the parameter names: `reasoning_effort`
+                on a model with no reasoning at all (or with an on/off switch
+                that the request also turned off), and `thinking` (or
+                `reasoning`, the OpenRouter dialect) on a model with no reasoning
+                switch, and `parallel_tool_calls` when a `tool_choice: "required"`
+                request sent `true` to a model the gateway bounds to one tool
+                call (`GLM-5.2`, `MiniMax-M2.7`,
+                `NVIDIA-Nemotron-3.5-Lightning-30B-A3B`), where it is forced to
+                `false`. A malformed value is a `400` on every model; only a
+                well-formed one the model cannot honour is dropped.
+            x-flexai-adjusted-params:
+              schema: { type: string }
+              description: |
+                Present only when the gateway honoured a request parameter at
+                the nearest level the model supports rather than exactly; a
+                comma-separated list of `name=value`. Two cases today.
+                `reasoning_effort=on` (`reasoning=on` when sent as OpenRouter's
+                `reasoning.effort` or on `/v1/responses`): the model has a
+                reasoning on/off switch but no depth setting, so any effort from
+                `low` to `max` turns reasoning on at the model's own depth.
+                `none` and `minimal` turn it off and carry no header.
+                `reasoning_effort=high` (`reasoning=high` in the same spellings):
+                the model has two depths (`DeepSeek-V4-Flash-0731`), so a `low`
+                or `medium` was rounded up to its high level rather than
+                turning reasoning off, or a `minimal` was floored to it because
+                `thinking: {"type": "enabled"}` was also sent. `high`, `max` and
+                a bare `minimal` carry no header.
+            x-flexai-sampling-defaulted:
+              schema: { type: string }
+              description: |
+                Present only when the gateway filled one or more sampling fields
+                from the model's catalog `sampling_defaults` because the request
+                left them unset (absent or `null`); a comma-separated list of the
+                field names, e.g. `top_p`. A value the caller sent, including
+                `temperature: 0`, is never replaced. No header means nothing was
+                filled.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, object, created, model, choices]
+                properties:
+                  id:
+                    type: string
+                  object:
+                    type: string
+                    enum: [chat.completion]
+                  created:
+                    type: integer
+                  model:
+                    type: string
+                  choices:
+                    type: array
+                    items:
+                      type: object
+                      required: [index, message, finish_reason]
+                      properties:
+                        index:
+                          type: integer
+                        message:
+                          type: object
+                          properties:
+                            role:
+                              type: string
+                            content:
+                              type: [string, "null"]
+                            reasoning_content:
+                              type: [string, "null"]
+                              description: "Reasoning text when reasoning is enabled on a reasoning-capable model; absent or null otherwise."
+                            tool_calls:
+                              type: array
+                              items:
+                                type: object
+                        finish_reason:
+                          type: string
+                          enum: [stop, length, tool_calls, content_filter]
+                  usage:
+                    type: object
+                    properties:
+                      prompt_tokens:
+                        type: integer
+                      completion_tokens:
+                        type: integer
+                      total_tokens:
+                        type: integer
+                      completion_tokens_details:
+                        type: object
+                        description: "Present when the model reasoned. reasoning_tokens are part of completion_tokens and billed as output; text_tokens is the visible-content remainder (live example: reasoning_tokens 78, text_tokens 2)."
+                        properties:
+                          reasoning_tokens:
+                            type: integer
+                          text_tokens:
+                            type: integer
+                      cache_read_input_tokens:
+                        type: integer
+                      cache_creation_input_tokens:
+                        type: integer
+                      cost:
+                        type: number
+                        description: |
+                          FlexAI extension. Our charge for this request in USD, rounded
+                          to 8 decimal places: what we bill you, not an upstream
+                          provider's cost. Equals
+                          `cost_details.upstream_inference_prompt_cost` +
+                          `cost_details.upstream_inference_completions_cost`. Present on
+                          non-streaming responses and on the final streamed chunk's
+                          `usage` (with `stream_options.include_usage`). Absent when the
+                          response cannot state the charge; the request is still billed,
+                          and `/v1/flex/usage/request/{request_id}` returns the recorded
+                          figure. Rates are published at `GET /v1/pricing`.
+                      cost_details:
+                        type: object
+                        description: |
+                          FlexAI extension. The parts of `cost`. Field names follow
+                          OpenRouter's usage-accounting fields for compatibility; the
+                          values are still our charge to you, not a provider's cost.
+                        additionalProperties: false
+                        properties:
+                          upstream_inference_prompt_cost:
+                            type: number
+                            description: The input-token part of `cost`, in USD (cached-input rate for tokens served from the prompt cache).
+                          upstream_inference_completions_cost:
+                            type: number
+                            description: The output-token part of `cost`, in USD, reasoning tokens included.
+            text/event-stream:
+              schema:
+                type: string
+                description: "SSE stream. Each event is `data: <json>`. Terminates with `data: [DONE]`."
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "402": { $ref: "#/components/responses/PaymentRequired" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "500": { $ref: "#/components/responses/ServerError" }
+
+  /v1/completions:
+    post:
+      tags: [Completions]
+      summary: Create a (legacy) text completion
+      description: |
+        Prefer `/v1/chat/completions` for new integrations. `/v1/completions` is
+        kept for compatibility with older OpenAI SDK callers.
+      operationId: createCompletion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [model, prompt]
+              properties:
+                model:
+                  type: string
+                  example: Meta-Llama-3.1-8B-Instruct-FP8
+                prompt:
+                  oneOf:
+                    - type: string
+                    - type: array
+                      items:
+                        type: string
+                max_tokens:
+                  type: integer
+                temperature:
+                  type: number
+                stream:
+                  type: boolean
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "402": { $ref: "#/components/responses/PaymentRequired" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "500": { $ref: "#/components/responses/ServerError" }
+
+  /v1/embeddings:
+    post:
+      tags: [Embeddings]
+      summary: Create an embedding
+      description: |
+        Generate a dense vector representation of one or more input strings. Use
+        the vector to rank documents by similarity, cluster, or as a retrieval
+        index.
+      operationId: createEmbedding
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [model, input]
+              properties:
+                model:
+                  type: string
+                  description: Embedding model id. See the [model catalog](https://flex.ai/models).
+                  example: bge-m3
+                input:
+                  oneOf:
+                    - type: string
+                    - type: array
+                      items:
+                        type: string
+                  description: Text (or list of texts) to embed.
+                  example: hello world
+                encoding_format:
+                  type: string
+                  enum: [float, base64]
+                  default: float
+                  description: |
+                    Encoding of the returned embedding values. Optional; defaults to
+                    `"float"` (matching OpenAI). Use `"base64"` for the compact wire
+                    format. Pass a string or omit the field — do not send an explicit `null`.
+      responses:
+        "200":
+          description: Successful response.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [object, data, model, usage]
+                properties:
+                  object:
+                    type: string
+                    enum: [list]
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        object:
+                          type: string
+                          enum: [embedding]
+                        index:
+                          type: integer
+                        embedding:
+                          type: array
+                          items:
+                            type: number
+                  model:
+                    type: string
+                  usage:
+                    type: object
+                    properties:
+                      prompt_tokens:
+                        type: integer
+                      total_tokens:
+                        type: integer
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "402": { $ref: "#/components/responses/PaymentRequired" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "500": { $ref: "#/components/responses/ServerError" }
+
+  /v1/models:
+    get:
+      tags: [Models]
+      summary: List available models
+      description: |
+        Returns every model currently being served to your account — chat,
+        code, reasoning, vision, embedding, image, audio and video — in
+        OpenAI's `Model` shape. Early-access models appear only for
+        organizations granted access to them. This is the catalog to build against: each entry says
+        which endpoint to call (`category`), how much prompt it accepts
+        (`context_length`), the longest completion it will produce
+        (`max_output_length`), which request parameters it honors
+        (`supported_parameters`) and what it costs (`pricing` for per-token
+        models, `media_pricing` for per-unit models).
+
+        Each entry is enriched with OpenRouter-spec metadata so
+        third-party catalog ingesters can consume `/v1/models` directly.
+        The OpenAI-compatible top-level keys (`id`, `object`, `created`,
+        `owned_by`) stay byte-identical for back-compat with the OpenAI Python
+        SDK. `owned_by` is always `"flexai"` — clients branching on the legacy
+        `"openai"` placeholder must update. The OpenAI SDK's `models.list()`
+        surfaces only those four keys as typed attributes; read the raw JSON
+        (or `model.model_extra` in the Python SDK) for the rest.
+
+        **Prices.** Per-token models carry `pricing`: `input_per_mtok` /
+        `output_per_mtok` are USD per million tokens as numbers, and `prompt` /
+        `completion` are the same rates in USD **per single token** as decimal
+        strings (OpenRouter's convention), so `"0.0000002"` is $0.20 per
+        million. Per-unit models carry `media_pricing`, in USD per
+        `billing_unit`. Both state `currency`.
+
+        **`null` means not published, never zero or unlimited.**
+        `context_length`, `max_output_length`, `pricing` and `media_pricing`
+        are present on every entry. A `null` limit means we have not published
+        one — the model still has limits — and a `null` price means the rate is
+        not published yet, not that the model is free (`is_free` is always
+        `false`). `pricing` is always `null` on per-unit models and
+        `media_pricing` on per-token models. Other optional fields are omitted
+        when we have no value for them.
+
+        The list is live: a model that is scaled down or restarting drops out
+        until it is serving again, so treat a missing id as "not available
+        right now" rather than "retired". If the service has no readiness
+        signal at all, it returns the full catalog instead and sets the
+        `X-FlexAI-Models-Degraded: no-readiness-signal` response header —
+        the list is still fine for discovery, but not a liveness verdict.
+        Responses are `Cache-Control: private, max-age=30`.
+      operationId: listModels
+      responses:
+        "200":
+          description: Successful response
+          headers:
+            Cache-Control:
+              schema: { type: string }
+              description: "private, max-age=30"
+            X-FlexAI-Models-Degraded:
+              schema: { type: string, enum: [no-readiness-signal] }
+              description: |
+                Present only when the service could not determine which models
+                are serving and returned the unfiltered catalog instead.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  object:
+                    type: string
+                    enum: [list]
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [id, object, created, owned_by, context_length, max_output_length, pricing, media_pricing]
+                      properties:
+                        id:
+                          type: string
+                          description: |
+                            Model id. Use this value as the `model` field on
+                            the endpoint `category` points to.
+                        object:
+                          type: string
+                          enum: [model]
+                        created:
+                          type: integer
+                          description: |
+                            Unix timestamp of when the model was added to the
+                            catalog. `0` when that date is not recorded.
+                        owned_by:
+                          type: string
+                          enum: [flexai]
+                          description: |
+                            Constant `"flexai"`. (Earlier releases returned a
+                            legacy `"openai"` placeholder — clients branching
+                            on it must update.)
+                        hugging_face_id:
+                          type: string
+                          description: |
+                            HF Hub id when the model is published on Hugging Face.
+                        aliases:
+                          type: array
+                          items:
+                            type: string
+                          description: |
+                            Stable, human-friendly handles for this model (e.g.
+                            `coder-30b`). Any alias may be passed as `model` in a
+                            request in place of `id`, and — unlike `id`, which
+                            carries the checkpoint/quantization — an alias does
+                            not change when the underlying checkpoint or
+                            quantization does. Pin to an alias for config that
+                            survives model updates. Omitted when a model has no
+                            aliases.
+                        name:
+                          type: string
+                          description: Human-readable display label.
+                        category:
+                          type: string
+                          enum: [text, code, reasoning, multimodal, vision, embedding, rerank, image, audio, video]
+                          description: |
+                            Model family / modality. Tells you which endpoint to call:
+                            `text`/`code`/`reasoning`/`vision` →
+                            `/v1/chat/completions`; `embedding` → `/v1/embeddings`;
+                            `image` → `/v1/images/generations`; `audio` →
+                            `/v1/audio/speech` (text-to-speech) or
+                            `/v1/audio/transcriptions` (speech-to-text, when
+                            `input_modalities` includes `audio`); `video` →
+                            `/v1/videos/generations`.
+
+                            `vision` covers every chat model that accepts image
+                            input, and takes precedence over `text`, `code` and
+                            `reasoning` for those models: a reasoning model that
+                            reads images is reported as `vision`, not
+                            `reasoning`. Use `input_modalities` and
+                            `supported_parameters` rather than `category` if you
+                            need a model's other properties.
+
+                            `multimodal` is **deprecated**: image-input chat
+                            models are being folded into `vision`, and once that
+                            rollout completes this value no longer appears in
+                            responses (it stays in the enum until then so
+                            generated clients keep decoding current responses).
+                            Treat it exactly like `vision` — call
+                            `/v1/chat/completions`.
+                        input_modalities:
+                          type: array
+                          items:
+                            type: string
+                            enum: [text, image, audio, file]
+                          description: |
+                            Modalities the model accepts as input.
+                        output_modalities:
+                          type: array
+                          items:
+                            type: string
+                            enum: [text, image, video, audio, embeddings, rerank]
+                          description: |
+                            Modalities the model produces.
+                        quantization:
+                          type: string
+                          enum: [int4, int8, fp4, mxfp4, nvfp4, fp6, fp8, mxfp8, fp16, bf16, fp32]
+                          description: |
+                            Weight precision the model is served at. The
+                            microscaling formats are reported as themselves —
+                            `mxfp4` (OCP microscaling) and `nvfp4` (NVIDIA
+                            block-scaled) are distinct from straight `fp4`.
+                            Omitted for quantization schemes whose precision
+                            varies per checkpoint (AWQ, GPTQ).
+                        context_length:
+                          type: [integer, "null"]
+                          description: |
+                            Context window in tokens: prompt plus completion
+                            must fit inside it. A request that does not fit is
+                            rejected with `400`. `null` when not yet published
+                            — that does not mean unlimited.
+                        max_output_length:
+                          type: [integer, "null"]
+                          description: |
+                            The largest completion this model produces, in
+                            tokens. On chat-family models it equals
+                            `context_length`: there is no separate output
+                            ceiling, so a completion can use whatever the
+                            prompt leaves free, and `max_tokens` chooses the
+                            split. A value smaller than `context_length` is a
+                            real cap. This is a ceiling, not the default: a
+                            non-streaming chat request that sets neither
+                            `max_tokens` nor `max_completion_tokens` is capped
+                            at 2048 output tokens on a non-reasoning model
+                            (reasoning models get no default; see the
+                            `x-flexai-max-tokens-defaulted` header). `null` when not yet
+                            published or not applicable (embedding, image,
+                            audio and video models) — that does not mean
+                            unlimited.
+                        pricing:
+                          type: [object, "null"]
+                          description: |
+                            Per-token USD rates. An object only for models
+                            billed per token with at least one rate greater
+                            than zero; `null` otherwise. `input_per_mtok`,
+                            `output_per_mtok` and `cached_input_per_mtok` are
+                            USD per million tokens as numbers — the same values
+                            `/v1/pricing` reports. `prompt`, `completion` and
+                            `input_cache_read` are the same rates per single
+                            token as decimal strings, in OpenRouter's
+                            convention. The keys
+                            we never charge for (request/image/web_search/
+                            internal_reasoning) are included as "0" so the
+                            object carries the standard OpenRouter pricing
+                            shape.
+
+                            `input_cache_read` is different: it appears only on
+                            models with cached-prefix (prompt-cache) pricing
+                            enabled, and quotes the discounted rate charged for
+                            each prompt token served from cache, with
+                            `cached_input_per_mtok` as the per-million figure.
+                            When the keys are absent the model has no cache
+                            discount and the whole prompt bills at `prompt` —
+                            absence never means cache reads are free.
+
+                            Models billed per unit rather than per token —
+                            image generation (per image), text-to-speech (per
+                            character), transcription (per minute of audio),
+                            video (per second) — have `pricing: null`,
+                            because none of those units has a key in this
+                            shape; their rates are in `media_pricing`. A `null`
+                            `pricing` never means free; see `is_free`.
+                          required: [currency]
+                          properties:
+                            currency: { type: string, enum: [USD] }
+                            input_per_mtok: { type: number }
+                            output_per_mtok: { type: number }
+                            cached_input_per_mtok: { type: number }
+                            prompt: { type: string }
+                            completion: { type: string }
+                            input_cache_read: { type: string }
+                            request: { type: string }
+                            image: { type: string }
+                            web_search: { type: string }
+                            internal_reasoning: { type: string }
+                        media_pricing:
+                          type: [array, "null"]
+                          description: |
+                            Per-unit USD rates for image, audio and video
+                            models — the counterpart of `pricing` for models
+                            not billed per token. One entry per price point: a
+                            model with several resolutions or quality levels
+                            has one entry for each, told apart by
+                            `resolution_tier`, `quality_tier` and `preset`.
+                            `null` on per-token models and on media models
+                            whose price is not yet published. The same rows
+                            appear on `/v1/pricing` as `unit_price_usd` /
+                            `billing_unit`.
+                          items:
+                            type: object
+                            required: [billing_unit, unit_price_usd, currency]
+                            properties:
+                              currency: { type: string, enum: [USD] }
+                              billing_unit:
+                                type: string
+                                enum: [image, megapixel, second_video, character, minute_audio, step, gpu_second]
+                                description: |
+                                  The unit one `unit_price_usd` buys: `image`
+                                  (per image), `megapixel` (per million output
+                                  pixels), `second_video` (per second of
+                                  generated video), `character` (per input
+                                  character, text-to-speech), `minute_audio`
+                                  (per minute of input audio, transcription),
+                                  `step` (per diffusion step) or `gpu_second`.
+                              unit_price_usd:
+                                type: number
+                                description: USD per `billing_unit`.
+                              resolution_tier:
+                                type: string
+                                nullable: true
+                              quality_tier:
+                                type: string
+                                nullable: true
+                              preset:
+                                type: string
+                                nullable: true
+                        is_free:
+                          type: boolean
+                          description: |
+                            Whether the model is served at no charge. Always
+                            `false` — every model in the catalog bills against
+                            the calling key's balance, including those with no
+                            `pricing` object on this endpoint.
+                        is_ready:
+                          type: boolean
+                          description: |
+                            Whether the model is ready for third-party catalog
+                            ingesters to route traffic to. `false` means this
+                            entry's price cannot be expressed in the `pricing`
+                            shape above (per-unit media billing) or is not yet
+                            published, so an ingester must not route to it. It
+                            is **not** a health or availability signal — every
+                            model listed here is live, and `is_ready: false`
+                            models remain fully callable with a direct request
+                            to their endpoint.
+                        supported_features:
+                          type: array
+                          items:
+                            type: string
+                            enum: [tools, json_mode, reasoning]
+                          description: |
+                            What the model can do. Tool-use and
+                            function-calling support both surface as
+                            `"tools"`. `reasoning` means the model exposes an
+                            extended reasoning trace separately from the final
+                            answer; to tune its depth, check
+                            `supported_parameters` for `reasoning_effort`.
+                        supported_parameters:
+                          type: array
+                          items:
+                            type: string
+                          description: |
+                            Request parameters this specific model actually
+                            honors — a real per-model capability gate, not a
+                            blanket list. Check it before sending a parameter
+                            rather than learning the answer from a runtime
+                            error. **This is the field to gate on**; it
+                            supersedes `supported_sampling_parameters`.
+
+                            Chat models (`/v1/chat/completions`) always carry
+                            the sampling surface every served engine
+                            implements — `temperature`, `top_p`, `top_k`,
+                            `min_p`, `frequency_penalty`, `presence_penalty`,
+                            `repetition_penalty`, `stop`, `seed`, `max_tokens`,
+                            `logit_bias` — plus `logprobs`, `top_logprobs`, and
+                            `response_format` for `{"type": "json_object"}`
+                            JSON mode. The rest varies per model:
+
+                            - `tools`, `tool_choice` — the model emits
+                              structured tool calls. Absent means tool calling
+                              does not work on that model, whatever your SDK
+                              lets you send.
+                            - `structured_outputs` — strict
+                              `response_format: {"type": "json_schema"}` with
+                              schema enforcement. A `json_schema` request to a
+                              model without it is rejected with `400`.
+                            - `reasoning_effort` — the model accepts a
+                              reasoning-budget hint.
+
+                            Non-chat models list their own endpoint's real
+                            parameter surface instead of the chat one — for
+                            example `input`, `voice`, `response_format` for
+                            text-to-speech, or `input`, `encoding_format` for
+                            embeddings. A parameter the endpoint would silently
+                            drop is deliberately not advertised.
+
+                            Image input is **not** listed here: `image_url`
+                            message content is a message shape rather than a
+                            request parameter, so vision support is advertised
+                            through `input_modalities` containing `image`.
+                        supported_sampling_parameters:
+                          type: array
+                          items:
+                            type: string
+                          description: |
+                            OpenAI sampling parameters the model accepts.
+                            Empty array for non-chat models (embeddings,
+                            TTS/STT, image/video gen, OCR) so clients reading
+                            this endpoint don't ask `bge-m3` for `temperature`.
+
+                            Superseded by `supported_parameters`, which is
+                            derived per model rather than being a fixed list.
+                            Retained for existing clients; gate new integrations
+                            on `supported_parameters`.
+
+                            This list also carries `top_a`, which
+                            `supported_parameters` omits because the gateway
+                            does not act on it. Where the two disagree,
+                            `supported_parameters` is authoritative.
+                        legal_caveat:
+                          type: string
+                          enum: [eu_caution]
+                          description: |
+                            Present only on the EU service, on models our EU
+                            legal review cleared with a caution. The model is
+                            callable; review its licence and terms for your
+                            use case. Absent everywhere else.
+                        description:
+                          type: string
+                          description: Free-text description of the model.
+                        provider:
+                          type: string
+                          description: The organization that published the model weights.
+                        supports:
+                          type: array
+                          items:
+                            type: string
+                          description: |
+                            Raw capability tags (for example `chat`,
+                            `tool_use`, `vision`, `embeddings`,
+                            `text_to_speech`). Prefer `category`,
+                            `input_modalities`, `output_modalities` and
+                            `supported_parameters`, which are the stable,
+                            documented projections of these tags; the tag
+                            vocabulary itself may grow.
+                        slug:
+                          type: string
+                          description: URL-safe handle used by the FlexAI model catalog pages.
+                        provider_logo:
+                          type: string
+                          description: |
+                            Portal display hint. Not part of the stable
+                            contract; may change without notice.
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /v1/models/{model}:
+    get:
+      tags: [Models]
+      summary: Retrieve a model
+      description: |
+        Returns one entry of the `GET /v1/models` catalog — the same object,
+        with the same fields and the same values, that the list returns for
+        that model to the same caller. The OpenAI SDK's
+        `client.models.retrieve("<id>")` calls this.
+
+        `model` may be the model's `id` or any of its `aliases`; the entry
+        returned always carries the canonical `id`. A model that is not in
+        your live catalog right now — unknown, retired, scaled down, or not
+        available to your account — returns `404` with
+        `code: "model_not_found"`. Responses carry the same `Cache-Control`
+        and `X-FlexAI-Models-Degraded` headers as the list.
+      operationId: retrieveModel
+      parameters:
+        - name: model
+          in: path
+          required: true
+          schema: { type: string }
+          description: Model `id` or alias.
+      responses:
+        "200":
+          description: Successful response
+          headers:
+            Cache-Control:
+              schema: { type: string }
+              description: "private, max-age=30"
+            X-FlexAI-Models-Degraded:
+              schema: { type: string, enum: [no-readiness-signal] }
+              description: See `GET /v1/models`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/paths/~1v1~1models/get/responses/200/content/application~1json/schema/properties/data/items"
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /v1/pricing:
+    get:
+      tags: [Models]
+      summary: List currently-effective per-model pricing
+      description: |
+        FlexAI extension. Returns the currently-effective pricing rows for every
+        model currently being served. A model that is temporarily not serving —
+        scaled down or restarting — drops out until it is back, so keep your own
+        copy of a rate rather than reading an absent row as a price change.
+        **Requires a Bearer API key** — the same key you use for
+        inference. Pricing is identical for every caller, but the endpoint is
+        authenticated so the live model catalogue isn't exposed to anonymous
+        probes. Cache-Control is `private, max-age=60, stale-while-revalidate=120`,
+        so a client may cache its own copy while shared/CDN caches will not.
+
+        `/v1/models` carries the same rates on each model entry (`pricing`
+        per token, `media_pricing` per unit) and is the catalog to build
+        against. This endpoint is the flat, per-million-token view of the same
+        numbers, with `pricing_type` and `effective_at` on every row, for
+        billing and cost tooling that wants prices without the rest of the
+        model metadata.
+      operationId: listPricing
+      responses:
+        "200":
+          description: Successful response
+          headers:
+            Cache-Control:
+              schema: { type: string }
+              description: "private, max-age=60, stale-while-revalidate=120"
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [object, data, generated_at]
+                properties:
+                  object: { type: string, enum: [list] }
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required: [model, pricing_type, effective_at, currency]
+                      properties:
+                        model: { type: string }
+                        pricing_type:
+                          type: string
+                          enum: [per_token, per_image, per_second, per_character, per_minute]
+                        currency: { type: string, enum: [USD] }
+                        effective_at: { type: string, format: date-time }
+                        input_per_mtok: { type: number, nullable: true }
+                        output_per_mtok: { type: number, nullable: true }
+                        cached_input_per_mtok:
+                          type: number
+                          nullable: true
+                          description: |
+                            USD per million prompt tokens served from the
+                            prefix cache, on models with cached-prefix
+                            (prompt-cache) pricing enabled. `null` means the
+                            model has no cache discount and the whole prompt
+                            bills at `input_per_mtok` — never that cache reads
+                            are free. The same rate appears on `/v1/models` as
+                            `pricing.input_cache_read`, quoted there in USD
+                            per single token (divide this value by 1,000,000).
+                        unit_price_usd: { type: number, nullable: true }
+                        billing_unit: { type: string, nullable: true }
+                        resolution_tier: { type: string, nullable: true }
+                        quality_tier: { type: string, nullable: true }
+                  generated_at: { type: string, format: date-time }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
+  /v1/flex/usage:
+    get:
+      tags: [Usage]
+      summary: Programmatic spend for the calling key
+      description: |
+        FlexAI-specific shape (intentionally not OpenAI's `/v1/organization/usage/*`
+        — that surface requires org/team scoping which FlexAI does not yet model).
+        Returns total spend, total tokens, per-model breakdown, and a daily
+        history for the API key in the `Authorization` header. Cached per-key
+        for 60 seconds.
+
+        `total_spend` is the sum of the charges applied to your account for the
+        requests in the window, so it matches your invoice for that period
+        exactly. Note that it is not recoverable from `total_tokens` and the
+        published per-token rates: a cached prompt is billed at the lower cached
+        rate, so a token-based re-derivation will read high. Group by
+        `canonical_model` to reconcile per model.
+      operationId: getUsage
+      parameters:
+        - name: days
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1, maximum: 90, default: 30 }
+          description: |
+            Number of trailing days to include in `daily`. Capped at 90, the
+            period for which per-key billed spend is retained.
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [object, currency, total_spend, total_tokens, total_requests, by_model, daily, generated_at]
+                properties:
+                  object: { type: string, enum: [usage] }
+                  currency: { type: string, enum: [USD] }
+                  total_spend: { type: number }
+                  total_tokens: { type: integer }
+                  total_requests: { type: integer }
+                  by_model:
+                    type: array
+                    description: |
+                      Per-model spend rows. Group by `canonical_model`+`modality`
+                      for reconciliation: `canonical_model` is the stable catalog
+                      id (the same id `/v1/pricing` and `/v1/models` use), whereas
+                      `model` equals `canonical_model`: the internal served
+                      routing id is not exposed. One row per `canonical_model` and
+                      modality: forms of the same model the ledger recorded under
+                      different raw ids are merged. Multi-modality models appear once per
+                      modality (image+image_edit, etc.). Text rows have
+                      `modality=text`, `units_consumed=null`, `billing_unit=tokens`.
+                    items:
+                      type: object
+                      required: [model, canonical_model, modality, requests, total_tokens, billing_unit, total_spend]
+                      properties:
+                        model:
+                          type: string
+                          description: |
+                            The catalog model id, equal to `canonical_model` (earlier
+                            releases returned the internal served routing id here).
+                        canonical_model:
+                          type: string
+                          description: |
+                            Stable catalog model id — matches the `model` field of
+                            `/v1/pricing` and `/v1/models`. Use this (with
+                            `modality`) as the reconciliation key.
+                        modality:
+                          type: string
+                          enum: [text, image, image_edit, video, audio, tts, stt]
+                        requests: { type: integer }
+                        total_tokens: { type: integer }
+                        units_consumed: { type: number, nullable: true }
+                        billing_unit: { type: string }
+                        total_spend: { type: number }
+                  daily:
+                    type: array
+                    items:
+                      type: object
+                      required: [date, requests, total_tokens, total_spend]
+                      properties:
+                        date: { type: string, format: date }
+                        requests: { type: integer }
+                        total_tokens: { type: integer }
+                        total_spend: { type: number }
+                  generated_at: { type: string, format: date-time }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422":
+          description: |
+            `?days` outside the [1, 365] range. Returns FastAPI's default
+            validation envelope (not the OpenAI shape used elsewhere on
+            this route). SDK clients should clamp client-side.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: array
+                    items: { type: object }
+        "503":
+          description: Authentication service temporarily unavailable.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "504":
+          description: Usage query timed out. Retry shortly.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /v1/flex/usage/request/{request_id}:
+    get:
+      tags: [Usage]
+      summary: Usage and cost for a single request
+      description: |
+        Looks up one request's usage row for exact per-request cost
+        attribution — the per-turn complement to the whole-key aggregate
+        `/v1/flex/usage` returns.
+
+        `request_id` is the value of the `x-litellm-call-id` response header
+        on the original inference call (**not** the `id` field in the
+        response body). Capture that header per call, then join it here.
+
+        The lookup is scoped to the calling key: a request made with a
+        different key returns the same `404` as an id that does not exist.
+        Rows are written when a request completes, so a lookup immediately
+        after the call may briefly `404` — retry after a few seconds.
+
+        `total_spend` is the charge applied to your account for this request —
+        the same figure the `/v1/flex/usage` aggregates sum, so per-request values
+        reconcile against those totals exactly. It is not derived from the token
+        counts returned alongside it: a cached prompt is billed at the lower cached
+        rate, so a token-based re-derivation reads high.
+
+        A request whose billing has not been written yet reports `0.0` rather than
+        an estimate; billing settles within seconds, so retry if you need the final
+        figure immediately after the call. Only LiteLLM-routed (text) requests carry
+        a call id, so rows always have `modality=text`.
+      operationId: getUsageRequest
+      parameters:
+        - name: request_id
+          in: path
+          required: true
+          schema: { type: string }
+          description: The `x-litellm-call-id` header value from the original response.
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  [
+                    object,
+                    currency,
+                    request_id,
+                    model,
+                    canonical_model,
+                    status,
+                    prompt_tokens,
+                    completion_tokens,
+                    total_tokens,
+                    total_spend,
+                    modality,
+                    billing_unit,
+                    started_at,
+                    ended_at,
+                    generated_at,
+                  ]
+                properties:
+                  object: { type: string, enum: [usage.request] }
+                  currency: { type: string, enum: [USD] }
+                  request_id: { type: string }
+                  model:
+                    type: string
+                    description: The catalog model id, equal to `canonical_model` (earlier releases returned the internal served routing id).
+                  canonical_model:
+                    type: string
+                    description: Stable catalog id; use this to group and reconcile per-model.
+                  status:
+                    type: string
+                    description: |
+                      `success`, `failure`, or `unknown`. Failed requests
+                      typically report zero tokens and $0 spend.
+                  prompt_tokens: { type: integer }
+                  completion_tokens: { type: integer }
+                  total_tokens: { type: integer }
+                  total_spend: { type: number }
+                  cached_tokens:
+                    type: integer
+                    nullable: true
+                    description: |
+                      How many of `prompt_tokens` were served from the prompt cache.
+                      Cached tokens bill at a lower rate, so this is what explains a
+                      `total_spend` below what `prompt_tokens` and the published
+                      per-token price would suggest — the two are not meant to agree
+                      on a cache-heavy request.
+
+                      `null` means billing has not written this request yet (the same
+                      window in which `total_spend` is `0.0`), which is different from
+                      a request that had no cache hits — that reports `0`.
+                  modality: { type: string, enum: [text] }
+                  units_consumed: { type: number, nullable: true }
+                  billing_unit: { type: string }
+                  started_at: { type: string, format: date-time }
+                  ended_at: { type: string, format: date-time }
+                  generated_at: { type: string, format: date-time }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "404":
+          description: |
+            No request with this id is visible to this key — unknown id, a
+            request made with a different key, or a row not yet written.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "503":
+          description: Authentication service temporarily unavailable.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "504":
+          description: Usage query timed out. Retry shortly.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /v1/flex/key:
+    get:
+      tags: [Usage]
+      summary: Limits and remaining credit for the calling key
+      description: |
+        Returns the calling key's configured limits and credit state: rate
+        limits (RPM/TPM), cumulative spend, budget ceiling, and remaining
+        budget — so a client can distinguish "the model is unhealthy" from
+        "I'm rate-limited / out of credits" without admin access. The key in
+        the `Authorization` header sees only itself.
+
+        This endpoint is **budget-exempt**: it keeps answering when the key is
+        out of credits (that is exactly when you need it). Inference endpoints
+        remain fully budget-gated.
+
+        `remaining_budget_usd` is the same value the gateway's 402
+        `insufficient_balance` check enforces, floored at 0. `rate_limit`
+        reports the key's *configured* limits — the same values the
+        `x-ratelimit-*` headers on inference responses advertise; for live
+        headroom in the current window, read
+        `x-ratelimit-api_key-remaining-requests` from a successful
+        non-streaming response (or `x-ratelimit-remaining-requests` from a
+        429).
+      operationId: getKey
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  [
+                    object,
+                    currency,
+                    key_name,
+                    spend_usd,
+                    max_budget_usd,
+                    remaining_budget_usd,
+                    rate_limit,
+                    expires_at,
+                    generated_at,
+                  ]
+                properties:
+                  object: { type: string, enum: [key] }
+                  currency: { type: string, enum: [USD] }
+                  key_name:
+                    type: string
+                    nullable: true
+                    description: Masked display name ("sk-...abcd"); never the full key.
+                  spend_usd: { type: number }
+                  max_budget_usd:
+                    type: number
+                    nullable: true
+                    description: Budget ceiling for this key; null when no per-key ceiling is configured.
+                  remaining_budget_usd:
+                    type: number
+                    nullable: true
+                    description: max_budget_usd - spend_usd, floored at 0; null when max_budget_usd is null.
+                  rate_limit:
+                    type: object
+                    required: [rpm, tpm]
+                    properties:
+                      rpm:
+                        type: integer
+                        nullable: true
+                        description: Requests per minute; null when no per-key limit is configured.
+                      tpm:
+                        type: integer
+                        nullable: true
+                        description: Tokens per minute; null when no per-key limit is configured.
+                  expires_at:
+                    type: string
+                    format: date-time
+                    nullable: true
+                    description: When this key expires; null means it never expires.
+                  generated_at: { type: string, format: date-time }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403":
+          description: The key is blocked.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+        "502":
+          description: Upstream authentication service unavailable. Retry shortly.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: sk-xxxx
+      description: |
+        Virtual API key. Create one from the
+        [FlexAI dashboard](https://platform.flex.ai/dashboard/keys). Pass as
+        `Authorization: Bearer sk-xxxx`.
+
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [message, type]
+          properties:
+            message:
+              type: string
+            type:
+              type: string
+              example: invalid_request_error
+            code:
+              type: string
+              description: |
+                Stable machine-readable code for the failure. Present on
+                most error paths; OMITTED on FastAPI default-validation
+                bodies. Do not assume always present.
+            doc_url:
+              type: string
+              format: uri
+              description: |
+                FlexAI extension. Link to the relevant dashboard / docs
+                page for the failure mode (e.g. invalid key → /dashboard/keys).
+                Present on auth and quota errors.
+
+  responses:
+    BadRequest:
+      description: Invalid request — malformed body, unknown model, or schema violation.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Unauthorized:
+      description: Missing or invalid API key.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    PaymentRequired:
+      description: Key budget exhausted — add credit in the dashboard to continue.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Resource not found (e.g., unknown model or job id).
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    RateLimited:
+      description: |
+        Per-key RPM exceeded. Response includes `Retry-After` and
+        `x-ratelimit-*` headers.
+      headers:
+        Retry-After:
+          schema: { type: integer }
+          description: Seconds until the next window.
+        x-ratelimit-limit-requests:
+          schema: { type: integer }
+        x-ratelimit-remaining-requests:
+          schema: { type: integer }
+        x-ratelimit-reset-requests:
+          schema: { type: integer }
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    ServerError:
+      description: Upstream or gateway error. Safe to surface `error.message` to users.
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }

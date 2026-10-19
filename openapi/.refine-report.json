@@ -1,35 +1,22 @@
 {
   "provider": "flexai",
   "sources": [
-    "_original/flexai-token-factory-openapi.yml"
+    "_original/flexai-openapi.yml"
   ],
   "outputs": [
-    "flexai-audio-api-openapi.yml",
     "flexai-chat-api-openapi.yml",
     "flexai-completions-api-openapi.yml",
     "flexai-embeddings-api-openapi.yml",
-    "flexai-images-api-openapi.yml",
     "flexai-models-api-openapi.yml",
-    "flexai-video-api-openapi.yml"
+    "flexai-usage-api-openapi.yml"
   ],
-  "archived": [
-    "deleted 1 superseded output(s) from the previous generation"
-  ],
+  "archived": [],
   "errors": [],
   "warnings": [],
   "notes": [
     "sourced from openapi/_original/ (1 archived document(s)); previously refined output at the top level was skipped rather than re-split",
-    "flexai-token-factory-openapi.yml: upgraded openapi 3.0.3 -> OpenAPI 3.2.0",
-    "superseded outputs removed: flexai-chat-completions-api-openapi.yml",
-    "apis.yml register: written (+1 apis, 7 total)"
+    "flexai-openapi.yml: upgraded openapi 3.1.0 -> OpenAPI 3.2.0",
+    "apis.yml register: written (+2 apis, 5 total)"
   ],
-  "skipped": [
-    "flexai-audio-api-openapi.yml: previously refined output, superseded by openapi/_original/",
-    "flexai-chat-completions-api-openapi.yml: previously refined output, superseded by openapi/_original/",
-    "flexai-completions-api-openapi.yml: previously refined output, superseded by openapi/_original/",
-    "flexai-embeddings-api-openapi.yml: previously refined output, superseded by openapi/_original/",
-    "flexai-images-api-openapi.yml: previously refined output, superseded by openapi/_original/",
-    "flexai-models-api-openapi.yml: previously refined output, superseded by openapi/_original/",
-    "flexai-video-api-openapi.yml: previously refined output, superseded by openapi/_original/"
-  ]
+  "skipped": []
 }

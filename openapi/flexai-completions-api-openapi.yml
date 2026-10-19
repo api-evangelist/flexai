@@ -1,32 +1,36 @@
 openapi: 3.2.0
 info:
-  title: FlexAI Token Factory Completions API
-  version: v1
-  description: OpenAI-compatible inference API for FlexAI Token Factory.
+  title: FlexAI Inference Completions API
+  version: 1.0.0
+  description: 'OpenAI-compatible inference API for text, code, reasoning, vision, and
+
+    embedding models hosted by FlexAI. Use any OpenAI SDK by pointing the
+
+    `base_url` at this service.'
   contact:
-    name: FlexAI
-    url: https://docs.flex.ai
-  termsOfService: https://flex.ai/terms-of-service
-  x-provenance:
-    generated: '2026-07-19'
-    method: generated
-    source: https://docs.flex.ai/inference-api/reference/openai-compatibility and https://flex.ai/llms.txt — generated from FlexAI's documented OpenAI-compatible endpoint surface. Not a provider-published OpenAPI file.
+    name: FlexAI Support
+    email: support@flex.ai
+    url: https://docs.flex.ai/inference-api/overview
 servers:
-- url: https://tokens.flex.ai/v1
-  description: FlexAI Token Factory (serverless inference)
+- url: https://api.flex.ai
+  description: Production (US)
+- url: https://eu.api.flex.ai
+  description: Production (EU)
 security:
 - bearerAuth: []
 tags:
 - name: Completions
-  description: Legacy text completions
+  description: Legacy text completions.
 paths:
-  /completions:
+  /v1/completions:
     post:
-      operationId: createCompletion
-      summary: Create a text completion (legacy)
-      description: Legacy text-completion endpoint kept for OpenAI compatibility. Prefer /chat/completions for new work.
       tags:
       - Completions
+      summary: Create a (legacy) text completion
+      description: 'Prefer `/v1/chat/completions` for new integrations. `/v1/completions` is
+
+        kept for compatibility with older OpenAI SDK callers.'
+      operationId: createCompletion
       requestBody:
         required: true
         content:
@@ -39,8 +43,13 @@ paths:
               properties:
                 model:
                   type: string
+                  example: Meta-Llama-3.1-8B-Instruct-FP8
                 prompt:
-                  type: string
+                  oneOf:
+                  - type: string
+                  - type: array
+                    items:
+                      type: string
                 max_tokens:
                   type: integer
                 temperature:
@@ -49,59 +58,116 @@ paths:
                   type: boolean
       responses:
         '200':
-          description: A text completion
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
         '429':
-          $ref: '#/components/responses/TooManyRequests'
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
 components:
   responses:
-    TooManyRequests:
-      description: Account-level rate limit or budget exceeded. Includes `Retry-After` and `x-ratelimit-*` response headers.
+    ServerError:
+      description: Upstream or gateway error. Safe to surface `error.message` to users.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    BadRequest:
+      description: Invalid request — malformed body, unknown model, or schema violation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Missing or invalid API key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    PaymentRequired:
+      description: Key budget exhausted — add credit in the dashboard to continue.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    RateLimited:
+      description: 'Per-key RPM exceeded. Response includes `Retry-After` and
+
+        `x-ratelimit-*` headers.
+
+        '
       headers:
         Retry-After:
           schema:
             type: integer
-          description: Seconds to wait before retrying.
+          description: Seconds until the next window.
+        x-ratelimit-limit-requests:
+          schema:
+            type: integer
+        x-ratelimit-remaining-requests:
+          schema:
+            type: integer
+        x-ratelimit-reset-requests:
+          schema:
+            type: integer
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    BadRequest:
-      description: Request validation failure. The error object includes a `param` field indicating the offending path (OpenAI-compatible error envelope).
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
-    Unauthorized:
-      description: Invalid or missing API key (error code `authentication_error`; includes a `doc_url` extension pointing at the auth docs).
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
+            $ref: '#/components/schemas/Error'
   schemas:
-    ErrorResponse:
+    Error:
       type: object
+      required:
+      - error
       properties:
         error:
           type: object
+          required:
+          - message
+          - type
           properties:
             message:
               type: string
             type:
               type: string
-            param:
-              type:
-              - string
-              - 'null'
+              example: invalid_request_error
             code:
               type: string
+              description: 'Stable machine-readable code for the failure. Present on
+
+                most error paths; OMITTED on FastAPI default-validation
+
+                bodies. Do not assume always present.
+
+                '
             doc_url:
               type: string
+              format: uri
+              description: 'FlexAI extension. Link to the relevant dashboard / docs
+
+                page for the failure mode (e.g. invalid key → /dashboard/keys).
+
+                Present on auth and quota errors.
+
+                '
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
-      description: 'FlexAI API key passed as a bearer token: `Authorization: Bearer $FLEXAI_API_KEY`. Create a key at https://tokens.flex.ai/signup.'
+      bearerFormat: sk-xxxx
+      description: 'Virtual API key. Create one from the
+
+        [FlexAI dashboard](https://platform.flex.ai/dashboard/keys). Pass as
+
+        `Authorization: Bearer sk-xxxx`.
+
+        '

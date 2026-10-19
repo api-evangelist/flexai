@@ -1,92 +1,915 @@
 openapi: 3.2.0
 info:
-  title: FlexAI Token Factory Models API
-  version: v1
-  description: OpenAI-compatible inference API for FlexAI Token Factory.
+  title: FlexAI Inference Models API
+  version: 1.0.0
+  description: 'OpenAI-compatible inference API for text, code, reasoning, vision, and
+
+    embedding models hosted by FlexAI. Use any OpenAI SDK by pointing the
+
+    `base_url` at this service.'
   contact:
-    name: FlexAI
-    url: https://docs.flex.ai
-  termsOfService: https://flex.ai/terms-of-service
-  x-provenance:
-    generated: '2026-07-19'
-    method: generated
-    source: https://docs.flex.ai/inference-api/reference/openai-compatibility and https://flex.ai/llms.txt — generated from FlexAI's documented OpenAI-compatible endpoint surface. Not a provider-published OpenAPI file.
+    name: FlexAI Support
+    email: support@flex.ai
+    url: https://docs.flex.ai/inference-api/overview
 servers:
-- url: https://tokens.flex.ai/v1
-  description: FlexAI Token Factory (serverless inference)
+- url: https://api.flex.ai
+  description: Production (US)
+- url: https://eu.api.flex.ai
+  description: Production (EU)
 security:
 - bearerAuth: []
 tags:
 - name: Models
-  description: Model catalog
+  description: Discover available models.
 paths:
-  /models:
+  /v1/models:
     get:
-      operationId: listModels
-      summary: List available models
-      description: Return the live catalog of models served by FlexAI across all modalities, with category annotations (text, code, reasoning, vision, embedding, image, video, audio).
       tags:
       - Models
+      summary: List available models
+      description: 'Returns every model currently being served to your account — chat,
+
+        code, reasoning, vision, embedding, image, audio and video — in
+
+        OpenAI''s `Model` shape. Early-access models appear only for
+
+        organizations granted access to them. This is the catalog to build against: each entry says
+
+        which endpoint to call (`category`), how much prompt it accepts
+
+        (`context_length`), the longest completion it will produce
+
+        (`max_output_length`), which request parameters it honors
+
+        (`supported_parameters`) and what it costs (`pricing` for per-token
+
+        models, `media_pricing` for per-unit models).
+
+
+        Each entry is enriched with OpenRouter-spec metadata so
+
+        third-party catalog ingesters can consume `/v1/models` directly.
+
+        The OpenAI-compatible top-level keys (`id`, `object`, `created`,
+
+        `owned_by`) stay byte-identical for back-compat with the OpenAI Python
+
+        SDK. `owned_by` is always `"flexai"` — clients branching on the legacy
+
+        `"openai"` placeholder must update. The OpenAI SDK''s `models.list()`
+
+        surfaces only those four keys as typed attributes; read the raw JSON
+
+        (or `model.model_extra` in the Python SDK) for the rest.
+
+
+        **Prices.** Per-token models carry `pricing`: `input_per_mtok` /
+
+        `output_per_mtok` are USD per million tokens as numbers, and `prompt` /
+
+        `completion` are the same rates in USD **per single token** as decimal
+
+        strings (OpenRouter''s convention), so `"0.0000002"` is $0.20 per
+
+        million. Per-unit models carry `media_pricing`, in USD per
+
+        `billing_unit`. Both state `currency`.
+
+
+        **`null` means not published, never zero or unlimited.**
+
+        `context_length`, `max_output_length`, `pricing` and `media_pricing`
+
+        are present on every entry. A `null` limit means we have not published
+
+        one — the model still has limits — and a `null` price means the rate is
+
+        not published yet, not that the model is free (`is_free` is always
+
+        `false`). `pricing` is always `null` on per-unit models and
+
+        `media_pricing` on per-token models. Other optional fields are omitted
+
+        when we have no value for them.
+
+
+        The list is live: a model that is scaled down or restarting drops out
+
+        until it is serving again, so treat a missing id as "not available
+
+        right now" rather than "retired". If the service has no readiness
+
+        signal at all, it returns the full catalog instead and sets the
+
+        `X-FlexAI-Models-Degraded: no-readiness-signal` response header —
+
+        the list is still fine for discovery, but not a liveness verdict.
+
+        Responses are `Cache-Control: private, max-age=30`.'
+      operationId: listModels
       responses:
         '200':
-          description: The list of available models
+          description: Successful response
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: private, max-age=30
+            X-FlexAI-Models-Degraded:
+              schema:
+                type: string
+                enum:
+                - no-readiness-signal
+              description: 'Present only when the service could not determine which models
+
+                are serving and returned the unfiltered catalog instead.
+
+                '
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ModelList'
+                type: object
+                properties:
+                  object:
+                    type: string
+                    enum:
+                    - list
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                      - id
+                      - object
+                      - created
+                      - owned_by
+                      - context_length
+                      - max_output_length
+                      - pricing
+                      - media_pricing
+                      properties:
+                        id:
+                          type: string
+                          description: 'Model id. Use this value as the `model` field on
+
+                            the endpoint `category` points to.
+
+                            '
+                        object:
+                          type: string
+                          enum:
+                          - model
+                        created:
+                          type: integer
+                          description: 'Unix timestamp of when the model was added to the
+
+                            catalog. `0` when that date is not recorded.
+
+                            '
+                        owned_by:
+                          type: string
+                          enum:
+                          - flexai
+                          description: 'Constant `"flexai"`. (Earlier releases returned a
+
+                            legacy `"openai"` placeholder — clients branching
+
+                            on it must update.)
+
+                            '
+                        hugging_face_id:
+                          type: string
+                          description: 'HF Hub id when the model is published on Hugging Face.
+
+                            '
+                        aliases:
+                          type: array
+                          items:
+                            type: string
+                          description: 'Stable, human-friendly handles for this model (e.g.
+
+                            `coder-30b`). Any alias may be passed as `model` in a
+
+                            request in place of `id`, and — unlike `id`, which
+
+                            carries the checkpoint/quantization — an alias does
+
+                            not change when the underlying checkpoint or
+
+                            quantization does. Pin to an alias for config that
+
+                            survives model updates. Omitted when a model has no
+
+                            aliases.
+
+                            '
+                        name:
+                          type: string
+                          description: Human-readable display label.
+                        category:
+                          type: string
+                          enum:
+                          - text
+                          - code
+                          - reasoning
+                          - multimodal
+                          - vision
+                          - embedding
+                          - rerank
+                          - image
+                          - audio
+                          - video
+                          description: 'Model family / modality. Tells you which endpoint to call:
+
+                            `text`/`code`/`reasoning`/`vision` →
+
+                            `/v1/chat/completions`; `embedding` → `/v1/embeddings`;
+
+                            `image` → `/v1/images/generations`; `audio` →
+
+                            `/v1/audio/speech` (text-to-speech) or
+
+                            `/v1/audio/transcriptions` (speech-to-text, when
+
+                            `input_modalities` includes `audio`); `video` →
+
+                            `/v1/videos/generations`.
+
+
+                            `vision` covers every chat model that accepts image
+
+                            input, and takes precedence over `text`, `code` and
+
+                            `reasoning` for those models: a reasoning model that
+
+                            reads images is reported as `vision`, not
+
+                            `reasoning`. Use `input_modalities` and
+
+                            `supported_parameters` rather than `category` if you
+
+                            need a model''s other properties.
+
+
+                            `multimodal` is **deprecated**: image-input chat
+
+                            models are being folded into `vision`, and once that
+
+                            rollout completes this value no longer appears in
+
+                            responses (it stays in the enum until then so
+
+                            generated clients keep decoding current responses).
+
+                            Treat it exactly like `vision` — call
+
+                            `/v1/chat/completions`.
+
+                            '
+                        input_modalities:
+                          type: array
+                          items:
+                            type: string
+                            enum:
+                            - text
+                            - image
+                            - audio
+                            - file
+                          description: 'Modalities the model accepts as input.
+
+                            '
+                        output_modalities:
+                          type: array
+                          items:
+                            type: string
+                            enum:
+                            - text
+                            - image
+                            - video
+                            - audio
+                            - embeddings
+                            - rerank
+                          description: 'Modalities the model produces.
+
+                            '
+                        quantization:
+                          type: string
+                          enum:
+                          - int4
+                          - int8
+                          - fp4
+                          - mxfp4
+                          - nvfp4
+                          - fp6
+                          - fp8
+                          - mxfp8
+                          - fp16
+                          - bf16
+                          - fp32
+                          description: 'Weight precision the model is served at. The
+
+                            microscaling formats are reported as themselves —
+
+                            `mxfp4` (OCP microscaling) and `nvfp4` (NVIDIA
+
+                            block-scaled) are distinct from straight `fp4`.
+
+                            Omitted for quantization schemes whose precision
+
+                            varies per checkpoint (AWQ, GPTQ).
+
+                            '
+                        context_length:
+                          type:
+                          - integer
+                          - 'null'
+                          description: 'Context window in tokens: prompt plus completion
+
+                            must fit inside it. A request that does not fit is
+
+                            rejected with `400`. `null` when not yet published
+
+                            — that does not mean unlimited.
+
+                            '
+                        max_output_length:
+                          type:
+                          - integer
+                          - 'null'
+                          description: 'The largest completion this model produces, in
+
+                            tokens. On chat-family models it equals
+
+                            `context_length`: there is no separate output
+
+                            ceiling, so a completion can use whatever the
+
+                            prompt leaves free, and `max_tokens` chooses the
+
+                            split. A value smaller than `context_length` is a
+
+                            real cap. This is a ceiling, not the default: a
+
+                            non-streaming chat request that sets neither
+
+                            `max_tokens` nor `max_completion_tokens` is capped
+
+                            at 2048 output tokens on a non-reasoning model
+
+                            (reasoning models get no default; see the
+
+                            `x-flexai-max-tokens-defaulted` header). `null` when not yet
+
+                            published or not applicable (embedding, image,
+
+                            audio and video models) — that does not mean
+
+                            unlimited.
+
+                            '
+                        pricing:
+                          type:
+                          - object
+                          - 'null'
+                          description: 'Per-token USD rates. An object only for models
+
+                            billed per token with at least one rate greater
+
+                            than zero; `null` otherwise. `input_per_mtok`,
+
+                            `output_per_mtok` and `cached_input_per_mtok` are
+
+                            USD per million tokens as numbers — the same values
+
+                            `/v1/pricing` reports. `prompt`, `completion` and
+
+                            `input_cache_read` are the same rates per single
+
+                            token as decimal strings, in OpenRouter''s
+
+                            convention. The keys
+
+                            we never charge for (request/image/web_search/
+
+                            internal_reasoning) are included as "0" so the
+
+                            object carries the standard OpenRouter pricing
+
+                            shape.
+
+
+                            `input_cache_read` is different: it appears only on
+
+                            models with cached-prefix (prompt-cache) pricing
+
+                            enabled, and quotes the discounted rate charged for
+
+                            each prompt token served from cache, with
+
+                            `cached_input_per_mtok` as the per-million figure.
+
+                            When the keys are absent the model has no cache
+
+                            discount and the whole prompt bills at `prompt` —
+
+                            absence never means cache reads are free.
+
+
+                            Models billed per unit rather than per token —
+
+                            image generation (per image), text-to-speech (per
+
+                            character), transcription (per minute of audio),
+
+                            video (per second) — have `pricing: null`,
+
+                            because none of those units has a key in this
+
+                            shape; their rates are in `media_pricing`. A `null`
+
+                            `pricing` never means free; see `is_free`.
+
+                            '
+                          required:
+                          - currency
+                          properties:
+                            currency:
+                              type: string
+                              enum:
+                              - USD
+                            input_per_mtok:
+                              type: number
+                            output_per_mtok:
+                              type: number
+                            cached_input_per_mtok:
+                              type: number
+                            prompt:
+                              type: string
+                            completion:
+                              type: string
+                            input_cache_read:
+                              type: string
+                            request:
+                              type: string
+                            image:
+                              type: string
+                            web_search:
+                              type: string
+                            internal_reasoning:
+                              type: string
+                        media_pricing:
+                          type:
+                          - array
+                          - 'null'
+                          description: 'Per-unit USD rates for image, audio and video
+
+                            models — the counterpart of `pricing` for models
+
+                            not billed per token. One entry per price point: a
+
+                            model with several resolutions or quality levels
+
+                            has one entry for each, told apart by
+
+                            `resolution_tier`, `quality_tier` and `preset`.
+
+                            `null` on per-token models and on media models
+
+                            whose price is not yet published. The same rows
+
+                            appear on `/v1/pricing` as `unit_price_usd` /
+
+                            `billing_unit`.
+
+                            '
+                          items:
+                            type: object
+                            required:
+                            - billing_unit
+                            - unit_price_usd
+                            - currency
+                            properties:
+                              currency:
+                                type: string
+                                enum:
+                                - USD
+                              billing_unit:
+                                type: string
+                                enum:
+                                - image
+                                - megapixel
+                                - second_video
+                                - character
+                                - minute_audio
+                                - step
+                                - gpu_second
+                                description: 'The unit one `unit_price_usd` buys: `image`
+
+                                  (per image), `megapixel` (per million output
+
+                                  pixels), `second_video` (per second of
+
+                                  generated video), `character` (per input
+
+                                  character, text-to-speech), `minute_audio`
+
+                                  (per minute of input audio, transcription),
+
+                                  `step` (per diffusion step) or `gpu_second`.
+
+                                  '
+                              unit_price_usd:
+                                type: number
+                                description: USD per `billing_unit`.
+                              resolution_tier:
+                                type: string
+                                nullable: true
+                              quality_tier:
+                                type: string
+                                nullable: true
+                              preset:
+                                type: string
+                                nullable: true
+                        is_free:
+                          type: boolean
+                          description: 'Whether the model is served at no charge. Always
+
+                            `false` — every model in the catalog bills against
+
+                            the calling key''s balance, including those with no
+
+                            `pricing` object on this endpoint.
+
+                            '
+                        is_ready:
+                          type: boolean
+                          description: 'Whether the model is ready for third-party catalog
+
+                            ingesters to route traffic to. `false` means this
+
+                            entry''s price cannot be expressed in the `pricing`
+
+                            shape above (per-unit media billing) or is not yet
+
+                            published, so an ingester must not route to it. It
+
+                            is **not** a health or availability signal — every
+
+                            model listed here is live, and `is_ready: false`
+
+                            models remain fully callable with a direct request
+
+                            to their endpoint.
+
+                            '
+                        supported_features:
+                          type: array
+                          items:
+                            type: string
+                            enum:
+                            - tools
+                            - json_mode
+                            - reasoning
+                          description: 'What the model can do. Tool-use and
+
+                            function-calling support both surface as
+
+                            `"tools"`. `reasoning` means the model exposes an
+
+                            extended reasoning trace separately from the final
+
+                            answer; to tune its depth, check
+
+                            `supported_parameters` for `reasoning_effort`.
+
+                            '
+                        supported_parameters:
+                          type: array
+                          items:
+                            type: string
+                          description: "Request parameters this specific model actually\nhonors — a real per-model capability gate, not a\nblanket list. Check it before sending a parameter\nrather than learning the answer from a runtime\nerror. **This is the field to gate on**; it\nsupersedes `supported_sampling_parameters`.\n\nChat models (`/v1/chat/completions`) always carry\nthe sampling surface every served engine\nimplements — `temperature`, `top_p`, `top_k`,\n`min_p`, `frequency_penalty`, `presence_penalty`,\n`repetition_penalty`, `stop`, `seed`, `max_tokens`,\n`logit_bias` — plus `logprobs`, `top_logprobs`, and\n`response_format` for `{\"type\": \"json_object\"}`\nJSON mode. The rest varies per model:\n\n- `tools`, `tool_choice` — the model emits\n  structured tool calls. Absent means tool calling\n  does not work on that model, whatever your SDK\n  lets you send.\n- `structured_outputs` — strict\n  `response_format: {\"type\": \"json_schema\"}` with\n  schema enforcement. A `json_schema` request to a\n  model without it is rejected with `400`.\n- `reasoning_effort` — the model accepts a\n  reasoning-budget hint.\n\nNon-chat models list their own endpoint's real\nparameter surface instead of the chat one — for\nexample `input`, `voice`, `response_format` for\ntext-to-speech, or `input`, `encoding_format` for\nembeddings. A parameter the endpoint would silently\ndrop is deliberately not advertised.\n\nImage input is **not** listed here: `image_url`\nmessage content is a message shape rather than a\nrequest parameter, so vision support is advertised\nthrough `input_modalities` containing `image`.\n"
+                        supported_sampling_parameters:
+                          type: array
+                          items:
+                            type: string
+                          description: 'OpenAI sampling parameters the model accepts.
+
+                            Empty array for non-chat models (embeddings,
+
+                            TTS/STT, image/video gen, OCR) so clients reading
+
+                            this endpoint don''t ask `bge-m3` for `temperature`.
+
+
+                            Superseded by `supported_parameters`, which is
+
+                            derived per model rather than being a fixed list.
+
+                            Retained for existing clients; gate new integrations
+
+                            on `supported_parameters`.
+
+
+                            This list also carries `top_a`, which
+
+                            `supported_parameters` omits because the gateway
+
+                            does not act on it. Where the two disagree,
+
+                            `supported_parameters` is authoritative.
+
+                            '
+                        legal_caveat:
+                          type: string
+                          enum:
+                          - eu_caution
+                          description: 'Present only on the EU service, on models our EU
+
+                            legal review cleared with a caution. The model is
+
+                            callable; review its licence and terms for your
+
+                            use case. Absent everywhere else.
+
+                            '
+                        description:
+                          type: string
+                          description: Free-text description of the model.
+                        provider:
+                          type: string
+                          description: The organization that published the model weights.
+                        supports:
+                          type: array
+                          items:
+                            type: string
+                          description: 'Raw capability tags (for example `chat`,
+
+                            `tool_use`, `vision`, `embeddings`,
+
+                            `text_to_speech`). Prefer `category`,
+
+                            `input_modalities`, `output_modalities` and
+
+                            `supported_parameters`, which are the stable,
+
+                            documented projections of these tags; the tag
+
+                            vocabulary itself may grow.
+
+                            '
+                        slug:
+                          type: string
+                          description: URL-safe handle used by the FlexAI model catalog pages.
+                        provider_logo:
+                          type: string
+                          description: 'Portal display hint. Not part of the stable
+
+                            contract; may change without notice.
+
+                            '
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /v1/models/{model}:
+    get:
+      tags:
+      - Models
+      summary: Retrieve a model
+      description: 'Returns one entry of the `GET /v1/models` catalog — the same object,
+
+        with the same fields and the same values, that the list returns for
+
+        that model to the same caller. The OpenAI SDK''s
+
+        `client.models.retrieve("")` calls this.
+
+
+        `model` may be the model''s `id` or any of its `aliases`; the entry
+
+        returned always carries the canonical `id`. A model that is not in
+
+        your live catalog right now — unknown, retired, scaled down, or not
+
+        available to your account — returns `404` with
+
+        `code: "model_not_found"`. Responses carry the same `Cache-Control`
+
+        and `X-FlexAI-Models-Degraded` headers as the list.'
+      operationId: retrieveModel
+      parameters:
+      - name: model
+        in: path
+        required: true
+        schema:
+          type: string
+        description: Model `id` or alias.
+      responses:
+        '200':
+          description: Successful response
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: private, max-age=30
+            X-FlexAI-Models-Degraded:
+              schema:
+                type: string
+                enum:
+                - no-readiness-signal
+              description: See `GET /v1/models`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/paths/~1v1~1models/get/responses/200/content/application~1json/schema/properties/data/items'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /v1/pricing:
+    get:
+      tags:
+      - Models
+      summary: List currently-effective per-model pricing
+      description: 'FlexAI extension. Returns the currently-effective pricing rows for every
+
+        model currently being served. A model that is temporarily not serving —
+
+        scaled down or restarting — drops out until it is back, so keep your own
+
+        copy of a rate rather than reading an absent row as a price change.
+
+        **Requires a Bearer API key** — the same key you use for
+
+        inference. Pricing is identical for every caller, but the endpoint is
+
+        authenticated so the live model catalogue isn''t exposed to anonymous
+
+        probes. Cache-Control is `private, max-age=60, stale-while-revalidate=120`,
+
+        so a client may cache its own copy while shared/CDN caches will not.
+
+
+        `/v1/models` carries the same rates on each model entry (`pricing`
+
+        per token, `media_pricing` per unit) and is the catalog to build
+
+        against. This endpoint is the flat, per-million-token view of the same
+
+        numbers, with `pricing_type` and `effective_at` on every row, for
+
+        billing and cost tooling that wants prices without the rest of the
+
+        model metadata.'
+      operationId: listPricing
+      responses:
+        '200':
+          description: Successful response
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+              description: private, max-age=60, stale-while-revalidate=120
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - object
+                - data
+                - generated_at
+                properties:
+                  object:
+                    type: string
+                    enum:
+                    - list
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                      - model
+                      - pricing_type
+                      - effective_at
+                      - currency
+                      properties:
+                        model:
+                          type: string
+                        pricing_type:
+                          type: string
+                          enum:
+                          - per_token
+                          - per_image
+                          - per_second
+                          - per_character
+                          - per_minute
+                        currency:
+                          type: string
+                          enum:
+                          - USD
+                        effective_at:
+                          type: string
+                          format: date-time
+                        input_per_mtok:
+                          type: number
+                          nullable: true
+                        output_per_mtok:
+                          type: number
+                          nullable: true
+                        cached_input_per_mtok:
+                          type: number
+                          nullable: true
+                          description: 'USD per million prompt tokens served from the
+
+                            prefix cache, on models with cached-prefix
+
+                            (prompt-cache) pricing enabled. `null` means the
+
+                            model has no cache discount and the whole prompt
+
+                            bills at `input_per_mtok` — never that cache reads
+
+                            are free. The same rate appears on `/v1/models` as
+
+                            `pricing.input_cache_read`, quoted there in USD
+
+                            per single token (divide this value by 1,000,000).
+
+                            '
+                        unit_price_usd:
+                          type: number
+                          nullable: true
+                        billing_unit:
+                          type: string
+                          nullable: true
+                        resolution_tier:
+                          type: string
+                          nullable: true
+                        quality_tier:
+                          type: string
+                          nullable: true
+                  generated_at:
+                    type: string
+                    format: date-time
         '401':
           $ref: '#/components/responses/Unauthorized'
 components:
+  responses:
+    Unauthorized:
+      description: Missing or invalid API key.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource not found (e.g., unknown model or job id).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
   schemas:
-    ErrorResponse:
+    Error:
       type: object
+      required:
+      - error
       properties:
         error:
           type: object
+          required:
+          - message
+          - type
           properties:
             message:
               type: string
             type:
               type: string
-            param:
-              type:
-              - string
-              - 'null'
+              example: invalid_request_error
             code:
               type: string
+              description: 'Stable machine-readable code for the failure. Present on
+
+                most error paths; OMITTED on FastAPI default-validation
+
+                bodies. Do not assume always present.
+
+                '
             doc_url:
               type: string
-    Model:
-      type: object
-      properties:
-        id:
-          type: string
-        object:
-          type: string
-          example: model
-        created:
-          type: integer
-        owned_by:
-          type: string
-    ModelList:
-      type: object
-      properties:
-        object:
-          type: string
-          example: list
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/Model'
-  responses:
-    Unauthorized:
-      description: Invalid or missing API key (error code `authentication_error`; includes a `doc_url` extension pointing at the auth docs).
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/ErrorResponse'
+              format: uri
+              description: 'FlexAI extension. Link to the relevant dashboard / docs
+
+                page for the failure mode (e.g. invalid key → /dashboard/keys).
+
+                Present on auth and quota errors.
+
+                '
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
-      description: 'FlexAI API key passed as a bearer token: `Authorization: Bearer $FLEXAI_API_KEY`. Create a key at https://tokens.flex.ai/signup.'
+      bearerFormat: sk-xxxx
+      description: 'Virtual API key. Create one from the
+
+        [FlexAI dashboard](https://platform.flex.ai/dashboard/keys). Pass as
+
+        `Authorization: Bearer sk-xxxx`.
+
+        '
