@@ -1,23 +1,4 @@
 edges:
-- partner_name: OpenAI
-  partner: openai
-  partner_match: domain
-  type: contract
-  channel: provider-built
-  relationship: compatible
-  direction: provider-built
-  evidence: https://github.com/api-evangelist/flexai/blob/main/openapi/flexai-chat-completions-api-openapi.yml#L5
-  contract_reference:
-    repo: flexai
-    spec_file: flexai-chat-completions-api-openapi.yml
-    property: description
-    value: OpenAI-compatible
-    note: 'flexai declares OpenAI compatibility: ''description: OpenAI-compatible inference API for FlexAI Token
-      Factory.'''
-    detected_by: sweep-model-routing.py
-    detected: '2026-10-15'
-  detected_by: sweep-model-routing.py
-  first_seen: '2026-10-13'
 - partner_name: MLCommons MLPerf
   partner: mlcommons
   partner_match: register
@@ -53,9 +34,28 @@ edges:
       result, lapsed outside the current window; open-division families, rounds and result counts are context, never
       read
     detected_by: sweep-mlops.py
-    detected: '2026-10-15'
+    detected: '2026-10-19'
   detected_by: sweep-mlops.py
   first_seen: '2026-10-15'
+- partner_name: OpenAI
+  partner: openai
+  partner_match: domain
+  type: contract
+  channel: provider-built
+  relationship: compatible
+  direction: provider-built
+  evidence: https://github.com/api-evangelist/flexai/blob/main/openapi/_superseded/2026-10-19-stale/flexai-chat-completions-api-openapi.yml#L5
+  contract_reference:
+    repo: flexai
+    spec_file: flexai-chat-completions-api-openapi.yml
+    property: description
+    value: OpenAI-compatible
+    note: 'flexai declares OpenAI compatibility: ''description: OpenAI-compatible inference API for FlexAI Token
+      Factory.'''
+    detected_by: sweep-model-routing.py
+    detected: '2026-10-19'
+  detected_by: sweep-model-routing.py
+  first_seen: '2026-10-13'
 generated: '2026-10-13'
 method: searched
 checked:
