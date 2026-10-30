@@ -64,6 +64,151 @@
 > Full detail: **[Where this data comes from](https://apievangelist.com/about/where-our-data-comes-from)**
 <!-- API-EVANGELIST-PROVENANCE:END -->
 
-FlexAI is a company surfaced as a portfolio company of partech and added to the API Evangelist network as a stub for enrichment. Sector: AI/ML. This profile is a lead awaiting the enrichment pipeline.
+FlexAI is managed inference for builders — an OpenAI-compatible API (Token Factory) that provides a single API key across open models for text, code, reasoning, vision, embeddings, image, video, and audio, priced by usage per model. Beyond serverless inference the platform offers dedicated GPU endpoints, managed LoRA/QLoRA fine-tuning, distributed training, an Agent SDK (in trial), and a private AI cloud (AI Factory) deployable to VPC, on-prem, or air-gapped environments. Because the inference API is a drop-in OpenAI replacement, teams point the OpenAI SDK at the FlexAI base URL and change only the key. FlexAI is backed by Partech and profiled in the API Evangelist network for its developer surface and agent-native infrastructure.
 
-Backed by: partech — https://www.flex.ai/
+**Areas:** Company · Artificial Intelligence · Machine Learning · Inference · LLM · OpenAI-Compatible · GPU Compute · Embeddings · Fine-Tuning · Agents
+
+## FlexAI on APIs.io
+
+Everything profiled for FlexAI is published on APIs.io rather than in this repository. Start at the provider page — **[apis.io/providers/flexai/](https://apis.io/providers/flexai/)** — or go straight to one of the APIs or properties below.
+
+### APIs (7)
+
+- [FlexAI Audio API](https://apis.io/apis/flexai/flexai-audio-api/) — Speech-to-text and text-to-speech
+- [FlexAI Completions API](https://apis.io/apis/flexai/flexai-completions-api/) — Legacy text completions
+- [FlexAI Embeddings API](https://apis.io/apis/flexai/flexai-embeddings-api/) — Vector embeddings
+- [FlexAI Images API](https://apis.io/apis/flexai/flexai-images-api/) — Image generation
+- [FlexAI Models API](https://apis.io/apis/flexai/flexai-models-api/) — Model catalog
+- [FlexAI Video API](https://apis.io/apis/flexai/flexai-video-api/) — Video generation
+- [FlexAI Chat Completions API](https://apis.io/apis/flexai/flexai-chat-completions-api/) — Chat completions
+
+### Published properties
+
+Each property below is a page on APIs.io carrying the machine-readable artifact and what it says.
+
+#### MCP servers (1)
+
+Model Context Protocol servers that expose the API to agents.
+
+- [flexai-token-factory](https://apis.io/servers/flexai/flexai-token-factory/)
+
+#### Agentic access (1)
+
+Which operations an agent can call, which act, and which need a human in the loop.
+
+- [Flexai Agentic Access](https://apis.io/agentic-access/flexai/flexai-agentic-access/)
+
+#### Collections (14)
+
+Postman and Open Collection request collections.
+
+- [FlexAI Token Factory Audio API](https://apis.io/collections/flexai/open-flexai-audio-api/)
+- [FlexAI Token Factory Audio Chat API](https://apis.io/collections/flexai/open-flexai-chat-api/)
+- [FlexAI Token Factory Audio Completions API](https://apis.io/collections/flexai/open-flexai-completions-api/)
+- [FlexAI Token Factory Audio Embeddings API](https://apis.io/collections/flexai/open-flexai-embeddings-api/)
+- [FlexAI Token Factory Audio Images API](https://apis.io/collections/flexai/open-flexai-images-api/)
+- [FlexAI Token Factory Audio Models API](https://apis.io/collections/flexai/open-flexai-models-api/)
+- [FlexAI Token Factory Audio Video API](https://apis.io/collections/flexai/open-flexai-video-api/)
+- [FlexAI Token Factory Audio API](https://apis.io/collections/flexai/postman-flexai-audio-api/)
+- [FlexAI Token Factory Audio Chat API](https://apis.io/collections/flexai/postman-flexai-chat-api/)
+- [FlexAI Token Factory Audio Completions API](https://apis.io/collections/flexai/postman-flexai-completions-api/)
+- [FlexAI Token Factory Audio Embeddings API](https://apis.io/collections/flexai/postman-flexai-embeddings-api/)
+- [FlexAI Token Factory Audio Images API](https://apis.io/collections/flexai/postman-flexai-images-api/)
+- [FlexAI Token Factory Audio Models API](https://apis.io/collections/flexai/postman-flexai-models-api/)
+- [FlexAI Token Factory Audio Video API](https://apis.io/collections/flexai/postman-flexai-video-api/)
+
+#### Overlays (1)
+
+OpenAPI overlays, including conversational phrasing for each operation.
+
+- [Flexai Token Factory Overlay](https://apis.io/overlays/flexai/flexai-token-factory-overlay/)
+
+#### Security (2)
+
+Authentication, trust centre, and vulnerability disclosure.
+
+- [Flexai Authentication](https://apis.io/security/flexai/flexai-authentication/)
+- [Flexai Domain Security](https://apis.io/security/flexai/flexai-domain-security/)
+
+#### Plans and pricing (1)
+
+Published plans, tiers and prices.
+
+- [Flexai Plans](https://apis.io/plans/flexai/flexai-plans/)
+
+#### Rate limits (1)
+
+Published request limits.
+
+- [Flexai Rate Limits](https://apis.io/rate-limits/flexai/flexai-rate-limits/)
+
+## Where to find this API
+
+Links to the company's own pages. This repository publishes no copy of their specifications — the canonical document is theirs and lives at the URLs below.
+
+- [Website](https://www.flex.ai/)
+- [Documentation](https://docs.flex.ai)
+- [Getting started](https://docs.flex.ai/inference-api/quickstart)
+- [API reference](https://docs.flex.ai/inference-api/reference/openai-compatibility)
+- [Pricing](https://flex.ai/pricing)
+- [Sign up](https://tokens.flex.ai/signup)
+- [Blog](https://flex.ai/blog)
+- [Trust centre](https://security.flex.ai)
+- [Terms of service](https://flex.ai/terms-of-service)
+- [Privacy policy](https://flex.ai/privacy-policy)
+- [Status](https://status.flex.ai)
+
+## API Evangelist rating
+
+**Kin Score 44.9** — developing · rubric 0.25.0 · scored 2026-10-23
+
+| Facet | Score |
+|---|---|
+| Discoverability | 73.2 |
+| Contract quality | 13.9 |
+| Contract governance | 4.5 |
+| Operational transparency | 47.4 |
+| Developer ergonomics | 60.1 |
+| Access clarity | 71.1 |
+
+**Agent readiness 23.1** — agent-aware
+
+| Agent-readiness dimension | Result |
+|---|---|
+| Spec Presence | yes |
+| Agentic Access | derived (partial credit) |
+| Reversibility Documented | — |
+| MCP Server | — |
+| Auth Clarity | bearer (partial credit) |
+| Idempotency | — |
+| Error Semantics | derived (partial credit) |
+| OpenAPI Examples | — |
+| Rate Limit Signal | verified |
+| Event Surface Described | — |
+| Agent Skills | derived (partial credit) |
+| Well Known Catalog | — |
+| Consent Identity | — |
+| Agent Card | — |
+| Dry Run Mode | — |
+| Delegated Identity | — |
+| Protected Resource Metadata | — |
+| Dynamic Client Registration | — |
+| Agentic Commerce | — |
+| Pagination Ratio | — |
+| Operation Distinctiveness | na |
+
+**Regulatory alignment 27.3** — Horizontal (data, software, accessibility, platform)
+
+The rubric is published at [github.com/api-evangelist/kin-score](https://github.com/api-evangelist/kin-score). The per-check breakdown behind these numbers — which checks were earned, partial or missed — along with score history and how this provider compares to its peers, is available at [apis.io/providers/flexai/](https://apis.io/providers/flexai/).
+
+## How this profile is made
+
+API Evangelist profiles a company's public API surface the way a developer would find it: the website, developer portal and documentation, the specifications it publishes, its public repositories, and its pricing, status and changelog pages. From that it derives the properties above — contracts split per API, workflows, schemas, collections, governance rules, plans and rate limits — and scores them against the published [Kin Score rubric](https://github.com/api-evangelist/kin-score).
+
+The artifacts are published on [APIs.io](https://apis.io), not in this repository. This repository is the public record for FlexAI: the place to say something is wrong, missing or out of date, and to ask for a re-score or a removal.
+
+## Open an issue
+
+- **Something about this listing** — a wrong description, a missing API, a stale artifact or a question about the rating: [open an issue on this repository](https://github.com/api-evangelist/flexai/issues/new).
+- **A new API, or one that is not in the catalog yet** — [submit it on APIs.io](https://apis.io/add/).
+- **Anything else** — [the APIs.io inbox](https://github.com/api-search/inbox/issues/new) or [info@apievangelist.com](mailto:info@apievangelist.com).
